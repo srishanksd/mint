@@ -32,3 +32,6 @@ generated/products/*
 !generated/videos/.gitkeep
 !generated/images/.gitkeep
 !generated/products/.gitkeep
+
+generated/content/*
+!generated/content/.gitkeep
