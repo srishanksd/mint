@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MINT — Live Venture Storefront &amp; Partner Offers</title>
+  <script>
+    (function() {
+      var theme = localStorage.getItem('mint_theme') || 'light';
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+  <link rel="stylesheet" href="/static/css/dashboard.css">
+  <style>
+    .store-container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding-bottom: 60px;
+    }
+    .catalog-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+      gap: 18px;
+      margin-top: 14px;
+    }
+    .catalog-item {
+      background: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: var(--shadow-card);
+    }
+  </style>
+</head>
+<body>
+  <nav class="global-nav">
+    <div class="nav-links">
+      <a href="/" class="nav-link">Dashboard</a>
+      <a href="/studio" class="nav-link">Content Studio</a>
+      <a href="/products" class="nav-link">Digital Products</a>
+      <a href="/affiliates" class="nav-link">Affiliate Hub</a>
+      <a href="/portfolio" class="nav-link">Venture Portfolio</a>
+      <a href="/storefront" class="nav-link active">Storefront</a>
+    </div>
+    <div style="display: flex; gap: 12px; align-items: center;">
+      <button id="theme-toggle-btn" class="theme-toggle-btn" onclick="toggleMINTTheme()">
+        <span id="theme-icon">🌙</span> <span id="theme-text">Dark Mode</span>
+      </button>
+    </div>
+  </nav>
+
+  <div class="store-container">
+    <header style="margin-bottom: 24px;">
+      <div>
+        <h1 class="brand-title">MINT Verified Storefront</h1>
+        <p class="brand-subtitle">Curated Digital Toolkits, High-Value Guides &amp; Verified Partner Recommendations</p>
+      </div>
+    </header>
+
+    {% if artifact %}
+    <!-- Featured Digital Asset -->
+    <div class="neo-card" style="box-shadow: var(--shadow-card);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <span class="status-pill connected">Featured Venture Release</span>
+        <span style="font-size:12px; color:var(--text-muted);">Verified Local Merchant</span>
+      </div>
+      <h2 style="font-size:22px; font-weight:700; color:var(--text-primary); margin-bottom:8px;">{{ artifact.title }}</h2>
+      <p style="font-size:13.5px; color:var(--text-muted); margin-bottom:16px;">{{ artifact.hook }}</p>
+
+      <div style="background:var(--surface-nested); border:1px solid var(--border-subtle); border-radius:8px; padding:16px; margin-bottom:20px;">
+        <h4 style="font-size:13px; font-weight:600; color:var(--text-primary); margin-bottom:8px;">Included in this Edition:</h4>
+        <ul style="font-size:13px; color:var(--text-muted); margin-left:18px; line-height:1.7;">
+          <li>Automated Operational System &amp; Checklists</li>
+          <li>Full Guide Markdown &amp; HTML Deliverables</li>
+          <li>Commercial Re-use Rights</li>
+        </ul>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px; flex-wrap:wrap; gap:12px;">
+        <div>
+          <span style="font-size:12px; color:var(--text-muted);">Instant Digital Access</span>
+          <div style="font-size:24px; font-weight:700; color:var(--accent-teal);">$14.99</div>
+        </div>
+        <button class="neo-btn neo-btn-primary" onclick="simulateCheckout({{ artifact.experiment_id }})">Simulate Sandbox Purchase</button>
+      </div>
+
+      <div style="font-size:11px; color:var(--text-subtle); margin-top:16px; text-align:center;">
+        {{ artifact.disclaimer }}
+      </div>
+    </div>
+    {% endif %}
+
+    <div id="checkout-result" class="neo-card" style="display:none; margin-top:16px; box-shadow: var(--shadow-card);">
+      <h4 style="color:var(--text-primary); font-size:14px; margin-bottom:4px;">Test Order Processed!</h4>
+      <p style="font-size:12.5px; color:var(--text-muted);" id="checkout-detail"></p>
+    </div>
+
+    <!-- Published Digital Products -->
+    {% if products %}
+    <div class="neo-card" style="margin-top:24px;">
+      <div class="card-title">
+        <span>Available Digital Products</span>
+        <a href="/products" style="font-size:12px; color:var(--accent-teal); text-decoration:none;">View All ↗</a>
+      </div>
+      <div class="catalog-grid">
+        {% for p in products %}
+          <div class="catalog-item">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <span class="status-pill connected" style="font-size:10.5px;">{{ p.product_type|upper }}</span>
+              <span style="font-weight:700; color:var(--accent-teal); font-size:16px;">${{ "%.2f"|format(p.price) }}</span>
+            </div>
+            <h3 style="font-size:14.5px; font-weight:600; color:var(--text-primary); margin-bottom:6px;">{{ p.title }}</h3>
+            <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px; flex-grow:1; line-height:1.5;">{{ p.description[:95] }}...</p>
+            <div style="display:flex; gap:8px;">
+              <a href="/products/{{ p.slug }}" class="neo-btn" style="flex:1; text-align:center; font-size:11.5px; text-decoration:none; padding:8px;">Preview</a>
+              <a href="/api/products/{{ p.id }}/download" class="neo-btn neo-btn-primary" style="flex:1; text-align:center; font-size:11.5px; text-decoration:none; padding:8px;">Download</a>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Curated Partner Recommendations -->
+    {% if offers %}
+    <div class="neo-card" style="margin-top:24px;">
+      <div class="card-title">
+        <span>Curated Partner Recommendations</span>
+      </div>
+      <p style="font-size:12px; color:var(--text-muted); margin-bottom:14px;">
+        Transparent partner disclosure: Links route to vetted external merchants via privacy-conscious tracking.
+      </p>
+      <div class="catalog-grid">
+        {% for o in offers %}
+          <div class="catalog-item">
+            <span style="font-size:11px; color:var(--text-subtle); margin-bottom:4px;">{{ o.vendor }} &bull; {{ o.niche }}</span>
+            <h3 style="font-size:14.5px; font-weight:600; color:var(--text-primary); margin-bottom:6px;">{{ o.name }}</h3>
+            <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px; flex-grow:1; line-height:1.5;">{{ o.description[:90] }}</p>
+            <div style="font-size:10.5px; color:var(--text-subtle); margin-bottom:10px; line-height:1.4;">
+              {{ o.disclosure_copy }}
+            </div>
+            <a href="/go/{{ o.token }}" target="_blank" class="neo-btn neo-btn-primary" style="text-align:center; font-size:12px; text-decoration:none; padding:8px;">
+              Visit Partner Offer ↗
+            </a>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <script>
+    function initTheme() {
+      const saved = localStorage.getItem("mint_theme") || "light";
+      applyTheme(saved);
+    }
+    function applyTheme(theme) {
+      document.documentElement.setAttribute("data-theme", theme);
+      localStorage.setItem("mint_theme", theme);
+      const icon = document.getElementById("theme-icon");
+      const text = document.getElementById("theme-text");
+      if (icon && text) {
+        if (theme === "dark") {
+          icon.innerText = "☀️";
+          text.innerText = "Light Mode";
+        } else {
+          icon.innerText = "🌙";
+          text.innerText = "Dark Mode";
+        }
+      }
+    }
+    function toggleMINTTheme() {
+      const curr = document.documentElement.getAttribute("data-theme") || "light";
+      applyTheme(curr === "dark" ? "light" : "dark");
+    }
+    document.addEventListener("DOMContentLoaded", initTheme);
+
+    async function simulateCheckout(expId) {
+      try {
+        await fetch("/api/storefront/log_click", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ experiment_id: expId })
+        });
+      } catch (e) {}
+
+      const email = "tester." + Math.floor(Math.random() * 9000 + 1000) + "@sandbox.local";
+      const resp = await fetch("/api/storefront/test_order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ experiment_id: expId, email: email, price: 14.99 })
+      });
+      const data = await resp.json();
+      if (data.status === "success") {
+        document.getElementById("checkout-result").style.display = "block";
+        document.getElementById("checkout-detail").innerText = `Logged simulated sandbox transaction #${data.order_id} for ${email}. Reconciled on dashboard.`;
+      }
+    }
+  </script>
+</body>
+</html>

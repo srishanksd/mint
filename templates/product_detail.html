@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ product.title }} — MINT Digital Product</title>
+  <script>
+    (function() {
+      var theme = localStorage.getItem('mint_theme') || 'light';
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+  <link rel="stylesheet" href="/static/css/dashboard.css">
+  <style>
+    .detail-container {
+      max-width: 860px;
+      margin: 0 auto;
+      padding-bottom: 60px;
+    }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 700px) {
+      .meta-grid { grid-template-columns: 1fr; }
+    }
+    .meta-box {
+      background: var(--surface-nested);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .meta-box .label {
+      font-size: 11px;
+      text-transform: uppercase;
+      font-weight: 600;
+      color: var(--text-subtle);
+      margin-bottom: 4px;
+    }
+    .meta-box .val {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    /* Modal dialog */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(2px);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-box {
+      background: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 14px;
+      padding: 24px;
+      max-width: 500px;
+      width: 100%;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+    }
+  </style>
+</head>
+<body>
+  <nav class="global-nav">
+    <div class="nav-links">
+      <a href="/" class="nav-link">Dashboard</a>
+      <a href="/studio" class="nav-link">Content Studio</a>
+      <a href="/products" class="nav-link active">Digital Products</a>
+      <a href="/affiliates" class="nav-link">Affiliate Hub</a>
+      <a href="/portfolio" class="nav-link">Venture Portfolio</a>
+      <a href="/storefront" class="nav-link" target="_blank">Storefront ↗</a>
+    </div>
+    <div style="display: flex; gap: 12px; align-items: center;">
+      <button id="theme-toggle-btn" class="theme-toggle-btn" onclick="toggleMINTTheme()">
+        <span id="theme-icon">🌙</span> <span id="theme-text">Dark Mode</span>
+      </button>
+    </div>
+  </nav>
+
+  <div class="detail-container">
+    <div style="margin-bottom:20px;">
+      <a href="/products" style="color:var(--text-muted); text-decoration:none; font-size:13px;">&larr; Back to Digital Products</a>
+    </div>
+
+    <div class="neo-card">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+        <span class="status-pill connected">{{ product.product_type|upper }} &middot; VERSION {{ product.version or '1.0.0' }}</span>
+        <div style="text-align:right;">
+          <span style="font-size:24px; font-weight:700; color:var(--accent-teal);">${{ "%.2f"|format(product.price) }}</span>
+          <div>
+            {% if product.status == 'published' %}
+              <span style="font-size:11px; color:#166534; font-weight:600;">● Published on Storefront</span>
+            {% else %}
+              <span style="font-size:11px; color:#b45309; font-weight:500;">○ {{ product.status|capitalize }}</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <h1 style="font-size:24px; font-weight:700; color:var(--text-primary); margin-bottom:8px;">
+        {{ product.title }}
+      </h1>
+
+      <div style="font-size:14.5px; font-weight:500; color:var(--accent-teal); margin-bottom:18px;">
+        {{ product.value_proposition }}
+      </div>
+
+      <p style="font-size:13.5px; line-height:1.7; color:var(--text-muted); margin-bottom:22px;">
+        {{ product.description }}
+      </p>
+
+      <div class="meta-grid">
+        <div class="meta-box">
+          <div class="label">Target Audience</div>
+          <div class="val">{{ product.audience }}</div>
+        </div>
+        <div class="meta-box">
+          <div class="label">Deliverable Format</div>
+          <div class="val">
+            {% if product.has_pdf %}
+              PDF ({{ product.page_count or 1 }} pages)
+            {% elif product.has_deliverable %}
+              HTML Guide
+            {% else %}
+              <span style="color:#ef4444;">Not Generated</span>
+            {% endif %}
+          </div>
+        </div>
+        <div class="meta-box">
+          <div class="label">File Size</div>
+          <div class="val">{{ product.file_size_display or 'N/A' }}</div>
+        </div>
+      </div>
+
+      {% if product.contents %}
+        <div style="background:var(--surface-pure); border:1px solid var(--border-subtle); border-radius:10px; padding:18px; margin-bottom:24px;">
+          <h3 style="font-size:13.5px; font-weight:600; color:var(--text-primary); margin-bottom:10px;">
+            Included Curriculum &amp; Modules:
+          </h3>
+          <ul style="padding-left:18px; font-size:13px; color:var(--text-muted); line-height:1.8;">
+            {% for item in product.contents %}
+              <li>{{ item }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
+      <div style="background:var(--surface-nested); border:1px solid var(--border-subtle); border-radius:10px; padding:16px; margin-bottom:24px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+          <div>
+            <div style="font-size:11px; text-transform:uppercase; font-weight:600; color:var(--text-subtle);">Gumroad Synchronization &amp; Deliverable Attachment</div>
+            <div style="font-size:13px; font-weight:500; color:var(--text-primary); margin-top:3px;">
+              {% if product.gumroad_publish_status == 'published' or product.gumroad_sync_status == 'published' %}
+                <span style="color:#166534; font-weight:600;">● Published Live on Gumroad Store</span>
+              {% elif product.gumroad_sync_status == 'draft_created' %}
+                <span style="color:#b45309; font-weight:500;">○ Draft Saved on Gumroad</span>
+              {% else %}
+                <span style="color:var(--text-muted);">Not Synced to Gumroad</span>
+              {% endif %}
+              &nbsp;&middot;&nbsp;
+              {% if product.gumroad_attachment_status == 'verified_attached' %}
+                <span style="color:#166534; font-weight:600;">✓ PDF Deliverable Attached</span>
+              {% elif product.gumroad_id %}
+                <span style="color:#b45309;">PDF Upload Required on Gumroad</span>
+              {% else %}
+                <span style="color:var(--text-muted);">PDF Attachment: N/A</span>
+              {% endif %}
+            </div>
+
+            {% if product.gumroad_id %}
+              <div style="display:flex; gap:12px; margin-top:8px; align-items:center; flex-wrap:wrap;">
+                {% if product.gumroad_url %}
+                  <a href="{{ product.gumroad_url }}" target="_blank" style="font-size:12px; color:var(--accent-teal); text-decoration:none;">
+                    View Gumroad Product Page ↗
+                  </a>
+                {% endif %}
+                <a href="https://gumroad.com/products/{{ product.gumroad_id }}/edit" target="_blank" style="font-size:12px; color:#4f46e5; text-decoration:none; font-weight:500;">
+                  Open Gumroad Editor to Upload PDF ↗
+                </a>
+                {% if product.gumroad_attachment_status != 'verified_attached' %}
+                  <button onclick="handleVerifyAttachment()" class="neo-btn" style="font-size:11px; padding:4px 8px;">
+                    Confirm PDF Uploaded
+                  </button>
+                {% endif %}
+              </div>
+            {% endif %}
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button onclick="handlePublishProduct()" class="neo-btn neo-btn-primary" style="font-size:12.5px; padding:8px 16px;">
+              Publish Live
+            </button>
+            <button onclick="openDeleteProductModal()" class="neo-btn" style="color:#ef4444; border-color:rgba(239,68,68,0.3); font-size:12.5px; padding:8px 16px;">
+              Delete Product
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {% if product.generation_prompt_text %}
+        <details style="margin-bottom:24px;">
+          <summary style="font-size:12.5px; font-weight:600; color:var(--text-muted); cursor:pointer;">
+            Inspect Original Gemini Prompt Specification
+          </summary>
+          <pre style="background:var(--surface-nested); border:1px solid var(--border-subtle); border-radius:8px; padding:14px; font-size:11.5px; color:var(--text-secondary); white-space:pre-wrap; margin-top:8px;">{{ product.generation_prompt_text }}</pre>
+        </details>
+      {% endif %}
+
+      <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+        {% if product.has_deliverable %}
+          <a href="/api/products/{{ product.id }}/download" class="neo-btn neo-btn-primary" style="padding:10px 22px; font-size:13px; text-decoration:none;">
+            Download Deliverable (.pdf / .html)
+          </a>
+        {% else %}
+          <button class="neo-btn" disabled style="padding:10px 22px; font-size:13px; opacity:0.5; cursor:not-allowed;">
+            No File Deliverable Available
+          </button>
+        {% endif %}
+        <a href="/storefront" class="neo-btn" style="padding:10px 22px; font-size:13px; text-decoration:none;">
+          Test Storefront Sandbox
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Payout Requirement Modal -->
+  <div id="payoutModal" class="modal-backdrop">
+    <div class="modal-box">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+        <div style="width:36px; height:36px; border-radius:50%; background:#fef3c7; color:#b45309; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:700;">!</div>
+        <h3 style="margin:0; font-size:16px; color:var(--text-primary);" id="modalTitle">Gumroad Payout Setup Required</h3>
+      </div>
+      <p style="font-size:13px; color:var(--text-muted); line-height:1.6;" id="modalBody">
+        This product is now Published on MINT Storefront! On Gumroad, it is currently saved as an active product draft because Gumroad requires connecting at least one payout method (Bank Account, Stripe, or PayPal) in your Gumroad account before activating public sales.
+      </p>
+      <div style="background:var(--surface-nested); border:1px solid var(--border-subtle); border-radius:8px; padding:12px; font-size:12px; color:var(--text-primary); margin-bottom:18px;">
+        <strong>Product status:</strong> Published locally on MINT Storefront &middot; Saved as editable product draft on your Gumroad store.
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:10px;">
+        <button onclick="closePayoutModal()" class="neo-btn" style="padding:9px 16px; font-size:12.5px;">Close</button>
+        <a id="modalActionBtn" href="https://gumroad.com/settings/payouts" target="_blank" class="neo-btn neo-btn-primary" style="padding:9px 16px; font-size:12.5px; text-decoration:none;">
+          Open Gumroad Payouts ↗
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function initTheme() {
+      const saved = localStorage.getItem("mint_theme") || "light";
+      applyTheme(saved);
+    }
+    function applyTheme(theme) {
+      document.documentElement.setAttribute("data-theme", theme);
+      localStorage.setItem("mint_theme", theme);
+      const icon = document.getElementById("theme-icon");
+      const text = document.getElementById("theme-text");
+      if (icon && text) {
+        if (theme === "dark") {
+          icon.innerText = "☀️";
+          text.innerText = "Light Mode";
+        } else {
+          icon.innerText = "🌙";
+          text.innerText = "Dark Mode";
+        }
+      }
+    }
+    function toggleMINTTheme() {
+      const curr = document.documentElement.getAttribute("data-theme") || "light";
+      applyTheme(curr === "dark" ? "light" : "dark");
+    }
+    document.addEventListener("DOMContentLoaded", initTheme);
+
+    function showPayoutModal(title, body, actionUrl) {
+      document.getElementById("modalTitle").innerText = title;
+      document.getElementById("modalBody").innerText = body;
+      if (actionUrl) {
+        document.getElementById("modalActionBtn").href = actionUrl;
+      }
+      document.getElementById("payoutModal").style.display = "flex";
+    }
+    function closePayoutModal() {
+      document.getElementById("payoutModal").style.display = "none";
+      location.reload();
+    }
+
+    async function handleVerifyAttachment() {
+      if (!confirm("Confirm that you have manually uploaded the product.pdf to Gumroad via the Gumroad editor?")) return;
+      try {
+        const resp = await fetch("/api/products/{{ product.id }}/verify_attachment", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ confirmed: true })
+        });
+        const data = await resp.json();
+        if (data.success) {
+          location.reload();
+        } else {
+          alert("Error verifying attachment: " + (data.error || "Unknown error"));
+        }
+      } catch (err) {
+        alert("Network error: " + err.message);
+      }
+    }
+
+    async function handlePublishProduct() {
+      try {
+        // 1. Mark published locally in MINT catalog & Storefront
+        await fetch("/api/products/{{ product.id }}/status", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "published" })
+        });
+
+        // 2. Publish to Gumroad
+        const gResp = await fetch("/api/products/{{ product.id }}/publish_gumroad", { method: "POST" });
+        const gData = await gResp.json();
+
+        if (gData.success) {
+          alert("Published live on MINT Storefront and Gumroad Store!");
+          location.reload();
+        } else if (gData.payout_setup_required) {
+          showPayoutModal(
+            "Gumroad Payout Setup Required",
+            "This product is now Published on MINT Storefront! On Gumroad, it is saved as an active product draft because Gumroad requires at least one payout method connected in your Gumroad account before activating public sales.",
+            gData.payout_settings_url || "https://gumroad.com/settings/payouts"
+          );
+        } else {
+          alert(`Product published on MINT Storefront. Gumroad notice: ${gData.message || gData.error || 'Saved as draft on Gumroad'}`);
+          location.reload();
+        }
+      } catch (err) {
+        alert("Request error: " + err.message);
+      }
+    }
+
+    function openDeleteProductModal() {
+      document.getElementById('deleteProductModal').style.display = 'flex';
+    }
+
+    function closeDeleteProductModal() {
+      document.getElementById('deleteProductModal').style.display = 'none';
+    }
+
+    async function executeDeleteProduct() {
+      const btn = document.getElementById('btnConfirmDeleteProduct');
+      btn.disabled = true;
+      btn.innerText = 'Deleting...';
+      try {
+        const res = await fetch("/api/products/{{ product.id }}", { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+          if (data.warning) {
+            alert(data.message + '\n\n' + data.warning);
+          }
+          window.location.href = "/products";
+        } else {
+          alert('Delete failed: ' + (data.error || 'Unknown error'));
+          btn.disabled = false;
+          btn.innerText = 'Delete Product';
+        }
+      } catch (err) {
+        alert('Delete request failed: ' + err.message);
+        btn.disabled = false;
+        btn.innerText = 'Delete Product';
+      }
+    }
+  </script>
+
+  <!-- Delete Product Modal -->
+  <div id="deleteProductModal" class="modal-backdrop" style="display:none;">
+    <div class="modal-box">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+        <div style="width:36px; height:36px; border-radius:50%; background:#fee2e2; color:#ef4444; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:700;">✕</div>
+        <h3 style="margin:0; font-size:16px; color:var(--text-primary);">Confirm Product Deletion</h3>
+      </div>
+      <p style="font-size:13px; color:var(--text-muted); line-height:1.5;">
+        Are you sure you want to delete <strong style="color:var(--text-primary);">{{ product.title }}</strong>?
+      </p>
+      <div style="font-size:12px; color:var(--text-secondary); background:var(--surface-nested); border:1px solid var(--border-subtle); border-radius:6px; padding:10px; margin-bottom:12px;">
+        <strong>Audit Preservation:</strong> If this product is referenced by existing orders or campaign history, it will be safely archived to preserve financial records. Unreferenced files will be permanently removed.
+      </div>
+      {% if product.gumroad_id or product.gumroad_url %}
+        <div style="font-size:12px; color:#b45309; background:#fef3c7; border:1px solid #fde68a; border-radius:6px; padding:10px; margin-bottom:12px;">
+          <strong>Gumroad Warning:</strong> This product is connected to Gumroad ({{ product.gumroad_url or product.gumroad_id }}). Deleting it locally will not automatically remove the listing from Gumroad. Please unpublish or delete it manually on Gumroad.
+        </div>
+      {% endif %}
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
+        <button type="button" onclick="closeDeleteProductModal()" class="neo-btn" style="padding:8px 16px;">Cancel</button>
+        <button type="button" id="btnConfirmDeleteProduct" onclick="executeDeleteProduct()" class="neo-btn" style="background:#ef4444; color:#fff; border-color:#dc2626; padding:8px 16px;">Delete Product</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MINT — Autonomous Digital Venture Engine</title>
+  <script>
+    (function() {
+      var theme = localStorage.getItem('mint_theme') || 'light';
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+  <link rel="stylesheet" href="/static/css/dashboard.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <nav class="global-nav">
+    <div class="nav-links">
+      <a href="/" class="nav-link active">Dashboard</a>
+      <a href="/studio" class="nav-link">Content Studio</a>
+      <a href="/products" class="nav-link">Digital Products</a>
+      <a href="/affiliates" class="nav-link">Affiliate Hub</a>
+      <a href="/portfolio" class="nav-link">Venture Portfolio</a>
+      <a href="/storefront" class="nav-link" target="_blank">Storefront ↗</a>
+    </div>
+    <div style="display: flex; gap: 12px; align-items: center;">
+      <button id="theme-toggle-btn" class="theme-toggle-btn" onclick="toggleMINTTheme()" aria-label="Toggle dark mode" aria-pressed="false">
+        <span id="theme-icon">🌙</span> <span id="theme-text">Dark Mode</span>
+      </button>
+    </div>
+  </nav>
+
+  <header>
+    <div>
+      <h1 class="brand-title">MINT</h1>
+      <p class="brand-subtitle">Autonomous Digital Venture Engine & Portfolio Allocator</p>
+    </div>
+    <div style="display: flex; gap: 12px; align-items: center;">
+      <span class="status-pill" id="pill-ai-status">Checking AI...</span>
+      <a href="/storefront" target="_blank" class="neo-btn" style="text-decoration:none;">Sandbox Storefront</a>
+      <button class="neo-btn neo-btn-primary" onclick="openStartModal()">Launch Venture Run</button>
+    </div>
+  </header>
+
+  <!-- Metric Overview Cards -->
+  <div class="metrics-row">
+    <div class="metric-box">
+      <div class="metric-label">Approved Budget Limit</div>
+      <div class="metric-value" id="val-budget">$0.00</div>
+      <div class="metric-sub" id="val-status">No active run</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-label">Logged Traffic & Clicks</div>
+      <div class="metric-value" id="val-traffic">0 views</div>
+      <div class="metric-sub" id="val-clicks">0 clicks &middot; <span id="val-traffic-source">Verified logs</span></div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-label">Sales & Transactions</div>
+      <div class="metric-value" id="val-gross">$0.00</div>
+      <div class="metric-sub" id="val-orders">0 real orders (0 test)</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-label">Net Operating Profit</div>
+      <div class="metric-value" id="val-profit" style="color: var(--accent-teal);">$0.00</div>
+      <div class="metric-sub" id="val-fees">After processing fees & operational spend</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-label">Compulsory Cash Reserve</div>
+      <div class="metric-value" id="val-reserve">$0.00</div>
+      <div class="metric-sub">25% capital safety lock</div>
+    </div>
+  </div>
+
+  <div class="dashboard-grid">
+    <!-- Left Column: Architecture, Assets, Portfolio -->
+    <div class="main-column">
+      <!-- Live Architecture Graph -->
+      <div class="neo-card">
+        <div class="card-title">
+          <span>Autonomous Agent Architecture</span>
+          <span style="font-size:12px; color:var(--text-muted);">Real-time execution pipeline &middot; Click node to inspect</span>
+        </div>
+
+        <!-- Live Execution Progression Banner -->
+        <div class="execution-banner" id="execution-banner">
+          <div class="execution-banner-top">
+            <div>
+              <span style="font-weight:600; font-size:13px;" id="exec-run-name">Venture Pipeline</span>
+              <span class="status-pill" id="exec-status-pill" style="margin-left:8px;">Engine Idle</span>
+            </div>
+            <div style="font-size:12px; color:var(--text-muted);">
+              <span id="exec-stage-label">Stage 0/9</span> &middot;
+              <span id="exec-elapsed-time">Elapsed: 0s</span>
+            </div>
+          </div>
+          <div class="execution-progress-bar-wrap">
+            <div class="execution-progress-bar" id="exec-progress-bar" style="width: 0%;"></div>
+          </div>
+          <div style="font-size:11.5px; color:var(--text-muted); display:flex; justify-content:space-between; flex-wrap:wrap; gap:4px;">
+            <span id="exec-current-task">Awaiting venture launch</span>
+            <span id="exec-latest-event" style="color:var(--accent-teal);">No active run</span>
+          </div>
+        </div>
+
+        <div class="architecture-container">
+          
+          <!-- Stage I: Discovery & Strategy (3 nodes) -->
+          <div class="arch-stage-meta">
+            <span class="stage-pill">STAGE I</span>
+            <span class="stage-name">Strategic Opportunity &amp; Architecture</span>
+          </div>
+          <div class="arch-row arch-row-3">
+            <div class="agent-node waiting" id="node-scout" onclick="inspectNode('Opportunity Scout')">
+              <div class="agent-node-head">
+                <span class="agent-name">1. Opportunity Scout</span>
+                <span class="agent-status-tag waiting" id="tag-scout">Waiting</span>
+              </div>
+              <div class="agent-node-body">
+                <div class="agent-info-row">
+                  <span class="agent-info-label">Operation:</span>
+                  <span class="agent-info-val" id="task-scout">Scanning market niches...</span>
+                </div>
+                <div class="agent-info-row">
+                  <span class="agent-info-label">Output:</span>
+                  <span class="agent-info-val" id="output-scout">—</span>
+                </div>
+                <div class="agent-err-box" id="err-scout" style="display:none;"></div>
+              </div>
+              <div class="agent-node-foot">
+                <span class="agent-time" id="time-scout">—</span>
+                <span class="agent-inspect-hint">Details ↗</span>
+              </div>
+            </div>
+
+            <div class="arch-arrow-h" aria-hidden="true">→</div>
+
+            <div class="agent-node waiting" id="node-strategy" onclick="inspectNode('Strategy Agent')">
+              <div class="agent-node-head">
+                <span class="agent-name">2. Strategy Agent</span>
+                <span class="agent-status-tag waiting" id="tag-strategy">Waiting</span>
+              </div>
+              <div class="agent-node-body">
+                <div class="agent-info-row">
+                  <span class="agent-info-label">Operation:</span>
+                  <span class="agent-info-val" id="task-strategy">Evaluating unit economics...</span>
+                </div>
+                <div class="agent-info-row">
+                  <span class="agent-info-label">Output:</span>
+                  <span class="agent-info-val" id="output-strategy">—</span>
+                </div>
+                <div class="agent-err-box" id="err-strategy" style="display:none;"></div>
+              </div>
+              <div class="agent-node-foot">
+                <span class="agent-time" id="time-strategy">—</span>
+                <span class="agent-inspect-hint">Details ↗</span>
+              </div>
+            </div>
+
+            <div class="arch-arrow-h" aria-hidden="true">→</div>
+
+            <div class="agent-node waiting" id="node-orchestrator" onclick="inspectNode('MINT Orchestrator')">
+              <div class="agent-node-head">
+                <span class="agent-name">3. Orchestrator</span>
+                <span class="agent-status-tag waiting" id="tag-orchestrator">Waiting</span>
+              </div>
+              <div class="agent-node-body">
+                <div class="agent-info-row">
+                  <span class="agent-info-label">Operation:</span>
+                  <span class="agent-info-val" id="task-orchestrator">Coordinating pipeline...</span>
+                </div>
+                <div class="agent-info-row">
+                  <span class="agent-info-label">Output:</span>
+                  <span class="agent-info-val" id="output-orchestrator">—</span>
+                </div>
+                <div class="agent-err-box" id="err-orchestrator" style="display:none;"></div>
+              </div>
+              <div class="agent-node-foot">
+                <span class="agent-time" id="time-orchestrator">—</span>
+                <span class="agent-inspect-hint">Details ↗</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Flow Connector: Stage I -> Stage II -->
+          <div class="arch-connector-v">
+            <span class="connector-arrow">↓</span>
+            <span class="connector-desc">Synthesize assets &amp; verify compliance</span>
+          </div>
+
+          <!-- Stage II: Asset Generation & Audit (2 nodes) -->
+          <div class="arch-stage-meta">
+            <span class="stage-pill">STAGE II</span>
+            <span class="stage-name">Asset Synthesis &amp; Compliance Audit</span>
+          </div>
+          <div class="arch-row arch-row-2">
+            <div class="agent-node waiting" id="node-creator" onclick="inspectNode('Content Creator')">
+              <div class="agent-node-head">
+                <span class="agent-name">4. Content Creator</span>
+                <span class="agent-status-tag waiting" id="tag-creator">Waiting</span>
+              </div>
+              <div class="agent-node-body">
+                <div class="agent-info-row">
+                  <span class="agent-info-label">Operation:</span>
+                  <span class="agent-info-val" id="task-creator">Rendering MP4 &amp; copy...</span>
+                </div>
+                <div class="agent-info-row">
+                  <span class="agent-info-label">Output:</span>
+                  <span class="agent-info-val" id="output-creator">—</span>
+                </div>
+                <div class="agent-err-box" id="err-creator" style="display:none;"></div>
+              </div>
+              <div class="agent-node-foot">
+                <span class="agent-time" id="time-creator">—</span>
+                <span class="agent-inspect-hint">Details ↗</span>
+              </div>
+            </div>
+
+            <div class="arch-arrow-h" aria-hidden="true">→</div>
+
+            <div class="agent-node waiting" id="node-quality" onclick="inspectNode('Quality Checker')">
+              <div class="agent-node-head">
+                <span class="agent-name">5. Quality Checker</span>
+                <span class="agent-status-tag waiting" id="tag-quality">Waiting</span>
+              </div>
+              <div class="agent-node-body">
+                <div class="agent-info-row">
+                  <span class="agent-info-label">Operation:</span>
+                  <span class="agent-info-val" id="task-quality">Auditing disclosures &amp; claims...</span>
+                </div>
+                <div class="agent-info-row">
+                  <span class="agent-info-label">Output:</span>
+                  <span class="agent-info-val" id="output-quality">—</span>
+                </div>
+                <div class="agent-err-box" id="err-quality" style="display:none;"></div>
+              </div>
+              <div class="agent-node-foot">
+                <span class="agent-time" id="time-quality">—</span>
+                <span class="agent-inspect-hint">Details ↗</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Flow Connector: Stage II -> Stage III -->
+          <div class="arch-connector-v">
+            <span class="connector-arrow">↓</span>
+            <span class="connector-desc">Deploy sandbox &amp; measure authentic traffic</span>
+          </div>
+
+          <!-- Stage III: Distribution & Measurement (2 nodes) -->
+          <div class="arch-stage-meta">
+            <span class="stage-pill">STAGE III</span>
+            <span class="stage-name">Platform Distribution &amp; Traffic Measurement</span>
+          </div>
+          <div class="arch-row arch-row-2">
+            <div class="agent-node waiting" id="node-commerce" onclick="inspectNode('Publishing Agent')">
+              <div class="agent-node-head">
+                <span class="agent-name">6. Publishing Agent</span>
+                <span class="agent-status-tag waiting" id="tag-commerce">Waiting</span>
+              </div>
+              <div class="agent-node-body">
+                <div class="agent-info-row">
+                  <span class="agent-info-label">Operation:</span>
+                  <span class="agent-info-val" id="task-commerce">Verifying platform readiness...</span>
+                </div>
+                <div class="agent-info-row">
+                  <span class="agent-info-label">Output:</span>
+                  <span class="agent-info-val" id="output-commerce">—</span>
+                </div>
+                <div class="agent-err-box" id="err-commerce" style="display:none;"></div>
+              </div>
+              <div class="agent-node-foot">
+                <span class="agent-time" id="time-commerce">—</span>
+                <span class="agent-inspect-hint">Details ↗</span>
+              </div>
+            </div>
+
+            <div class="arch-arrow-h" aria-hidden="true">→</div>
+
+            <div class="agent-node waiting" id="node-measurement" onclick="inspectNode('Measurement Agent')">
+              <div class="agent-node-head">
+                <span class="agent-name">7. Measurement Agent</span>
+                <span class="agent-status-tag waiting" id="tag-measurement">Waiting</span>
+              </div>
+              <div class="agent-node-body">
+                <div class="agent-info-row">
+                  <span class="agent-info-label">Operation:</span>
+                  <span class="agent-info-val" id="task-measurement">Awaiting logged traffic...</span>
+                </div>
+                <div class="agent-info-row">
+                  <span class="agent-info-label">Output:</span>
+                  <span class="agent-info-val" id="output-measurement">—</span>
+                </div>
+                <div class="agent-err-box" id="err-measurement" style="display:none;"></div>
+              </div>
+              <div class="agent-node-foot">
+                <span class="agent-time" id="time-measurement">—</span>
+                <span class="agent-inspect-hint">Details ↗</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Flow Connector: Stage III -> Stage IV -->
+          <div class="arch-connector-v">
+            <span class="connector-arrow">↓</span>
+            <span class="connector-desc">Deterministic accounting &amp; paper surplus allocation</span>
+          </div>
+
+          <!-- Stage IV: Finance & Portfolio (2 nodes) -->
+          <div class="arch-stage-meta">
+            <span class="stage-pill">STAGE IV</span>
+            <span class="stage-name">Financial Accounting &amp; Paper Allocation</span>
+          </div>
+          <div class="arch-row arch-row-2">
+            <div class="agent-node waiting" id="node-finance" onclick="inspectNode('Finance Agent')">
+              <div class="agent-node-head">
+                <span class="agent-name">8. Finance Agent</span>
+                <span class="agent-status-tag waiting" id="tag-finance">Waiting</span>
+              </div>
+              <div class="agent-node-body">
+                <div class="agent-info-row">
+                  <span class="agent-info-label">Operation:</span>
+                  <span class="agent-info-val" id="task-finance">Reconciling ledger &amp; reserves...</span>
+                </div>
+                <div class="agent-info-row">
+                  <span class="agent-info-label">Output:</span>
+                  <span class="agent-info-val" id="output-finance">—</span>
+                </div>
+                <div class="agent-err-box" id="err-finance" style="display:none;"></div>
+              </div>
+              <div class="agent-node-foot">
+                <span class="agent-time" id="time-finance">—</span>
+                <span class="agent-inspect-hint">Details ↗</span>
+              </div>
+            </div>
+
+            <div class="arch-arrow-h" aria-hidden="true">→</div>
+
+            <div class="agent-node waiting" id="node-portfolio" onclick="inspectNode('Portfolio Manager')">
+              <div class="agent-node-head">
+                <span class="agent-name">9. Portfolio Manager</span>
+                <span class="agent-status-tag waiting" id="tag-portfolio">Waiting</span>
+              </div>
+              <div class="agent-node-body">
+                <div class="agent-info-row">
+                  <span class="agent-info-label">Operation:</span>
+                  <span class="agent-info-val" id="task-portfolio">Balancing surplus allocation...</span>
+                </div>
+                <div class="agent-info-row">
+                  <span class="agent-info-label">Output:</span>
+                  <span class="agent-info-val" id="output-portfolio">—</span>
+                </div>
+                <div class="agent-err-box" id="err-portfolio" style="display:none;"></div>
+              </div>
+              <div class="agent-node-foot">
+                <span class="agent-time" id="time-portfolio">—</span>
+                <span class="agent-inspect-hint">Details ↗</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Generated Venture Asset & Digital Product Deliverable -->
+      <div class="neo-card" id="card-artifact" style="display:none;">
+        <div class="card-title">
+          <span>Active Product & Content Artifact</span>
+          <span class="status-pill connected" id="badge-compliance">Verified</span>
+        </div>
+        <div style="display:flex; gap: 20px;">
+          <div style="flex:1;">
+            <p style="font-size:12px; color:var(--text-muted); margin-bottom:4px;">Creative Hook:</p>
+            <p id="art-hook" style="font-weight:600; margin-bottom:14px; font-size:14px; color:var(--accent-navy);"></p>
+            <p style="font-size:12px; color:var(--text-muted); margin-bottom:4px;">Call to Action:</p>
+            <p id="art-cta" style="font-size:13px; margin-bottom:14px; color:var(--accent-teal);"></p>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <a id="btn-view-img" href="#" target="_blank" class="neo-btn" style="text-decoration:none; font-size:12px;">View Graphic</a>
+              <a id="btn-view-vid" href="#" target="_blank" class="neo-btn" style="text-decoration:none; font-size:12px;">Play Rendered Video</a>
+              <a id="btn-view-pkg" href="#" target="_blank" class="neo-btn" style="text-decoration:none; font-size:12px;">Open Product Guide</a>
+            </div>
+          </div>
+          <div style="flex:1; background:var(--surface-nested); border-radius:10px; padding:16px; border:1px solid var(--border-subtle);">
+            <div style="font-size:12.5px; font-weight:600; margin-bottom:8px; color:var(--text-primary);">Evidence-Based Recommendation:</div>
+            <p id="art-recommendation" style="font-size:13.5px; color:var(--text-primary); line-height:1.5;"></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Integrations & External Service Health -->
+      <div class="neo-card">
+        <div class="card-title">
+          <span>External Platform Integrations</span>
+          <span style="font-size:12px; color:var(--text-muted);">Official OAuth &amp; Meta Graph Connections</span>
+        </div>
+        <div class="integrations-grid">
+
+          <!-- YouTube OAuth Panel -->
+          <div class="integration-panel">
+            <div class="integration-header">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span class="platform-icon yt">▶</span>
+                <strong>YouTube Data API v3</strong>
+              </div>
+              <span class="status-pill" id="pill-yt">Checking...</span>
+            </div>
+            <p class="integration-status-text" id="desc-yt">Checking connection status...</p>
+            
+            <!-- Real YouTube Channel Stats -->
+            <div id="yt-channel-info" class="yt-info-card" style="display:none;"></div>
+
+            <!-- MINT Recorded Uploads List -->
+            <div id="yt-uploads-section" class="yt-uploads-section" style="display:none;">
+              <div class="yt-uploads-title">Recorded MINT Uploads (Private):</div>
+              <div id="yt-uploads-list" class="yt-uploads-list"></div>
+            </div>
+
+            <div class="integration-actions">
+              <a href="/auth/youtube" class="neo-btn neo-btn-primary" id="btn-yt-connect" style="font-size:11.5px; text-decoration:none; display:none;">Connect YouTube</a>
+              <button class="neo-btn" id="btn-yt-test" onclick="testYouTube(true)" style="font-size:11.5px; display:none;">Refresh Channel Info</button>
+              <a href="/studio" class="neo-btn" style="font-size:11.5px; text-decoration:none;">Clips &amp; Schedule ↗</a>
+              <button class="neo-btn" id="btn-yt-upload" onclick="openUploadModal()" style="font-size:11.5px; display:none;">Upload Video</button>
+              <button class="neo-btn" id="btn-yt-disconnect" onclick="disconnectYouTube()" style="font-size:11.5px; color:#c0392b; display:none;">Disconnect</button>
+            </div>
+          </div>
+
+          <!-- Instagram Panel -->
+          <div class="integration-panel">
+            <div class="integration-header">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span class="platform-icon ig">📷</span>
+                <strong>Instagram Meta Graph</strong>
+              </div>
+              <span class="status-pill" id="pill-ig">Checking...</span>
+            </div>
+            <p class="integration-status-text" id="desc-ig">Checking Instagram Creator / Business token.</p>
+            
+            <!-- Instagram Details & Status -->
+            <div id="ig-account-info" class="ig-info-card" style="display:none;"></div>
+
+            <!-- Setup Required Guide -->
+            <div id="ig-setup-guide" class="ig-setup-card" style="display:none;">
+              <div style="font-weight:600; margin-bottom:4px; font-size:11.5px;">Connection diagnostic / next steps</div>
+              <ol style="margin-left:18px; font-size:11px; color:var(--text-muted);">
+                <li>Choose the login flow used to create this token.</li>
+                <li>Use the matching account ID, token and publishing permission.</li>
+                <li>For Instagram Login, use instagram_business_basic and instagram_business_content_publish.</li>
+                <li>For Facebook Login, use the Page-connected Instagram flow and its required permissions.</li>
+                <li>Publishing videos requires a public HTTPS media URL; local files are export-only.</li>
+              </ol>
+            </div>
+
+            <div class="integration-actions">
+              <button class="neo-btn" id="btn-ig-check" onclick="checkInstagram()" style="font-size:11.5px;">Check Connection</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- YouTube Upload Modal -->
+      <div class="modal-overlay" id="upload-modal" style="display:none;">
+        <div class="modal-card" style="max-width:520px;">
+          <h3 style="margin-bottom:14px; font-size:17px; font-weight:600;">Upload Generated Video to YouTube</h3>
+          <div style="background:#fff3cd; border:1px solid #ffc107; border-radius:6px; padding:10px; margin-bottom:14px; font-size:12px; color:#856404;">
+            ⚠ Video will be uploaded as <strong>Private</strong>. You must manually change visibility in YouTube Studio.
+          </div>
+          <div style="margin-bottom:12px;">
+            <label style="font-size:12.5px; color:var(--text-muted); font-weight:500;">Select Generated Video</label>
+            <select id="upload-select" class="neo-input" style="width:100%; margin-top:4px;">
+              <option value="">Loading videos...</option>
+            </select>
+          </div>
+          <div style="margin-bottom:12px;">
+            <label style="font-size:12.5px; color:var(--text-muted); font-weight:500;">Title (max 100 chars)</label>
+            <input type="text" id="upload-title" class="neo-input" style="width:100%; margin-top:4px;" maxlength="100" placeholder="Enter video title">
+          </div>
+          <div style="margin-bottom:12px;">
+            <label style="font-size:12.5px; color:var(--text-muted); font-weight:500;">Description</label>
+            <textarea id="upload-desc" class="neo-input" style="width:100%; margin-top:4px; height:70px; resize:vertical;" placeholder="Video description..."></textarea>
+          </div>
+          <div style="margin-bottom:14px;">
+            <label style="font-size:12.5px; color:var(--text-muted); font-weight:500;">Tags (comma-separated)</label>
+            <input type="text" id="upload-tags" class="neo-input" style="width:100%; margin-top:4px;" placeholder="mint, digital, automation">
+          </div>
+          <div id="upload-status" style="font-size:12px; min-height:18px; margin-bottom:12px;"></div>
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+            <button type="button" class="neo-btn" onclick="deleteSelectedVideo()" style="color:#ef4444; font-size:12px;">Delete Video</button>
+            <div style="display:flex; gap:10px;">
+              <button class="neo-btn" onclick="document.getElementById('upload-modal').style.display='none'">Cancel</button>
+              <button class="neo-btn neo-btn-primary" onclick="confirmUpload()" id="btn-confirm-upload">Upload as Private</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Simulated Surplus Portfolio Allocation -->
+      <div class="neo-card" id="card-portfolio" style="display:none;">
+        <div class="card-title">
+          <span>Surplus Portfolio Allocation</span>
+          <span style="font-size:12px; color:var(--text-muted);" id="port-profile-label">Profile: Balanced</span>
+        </div>
+        <div style="display:flex; gap:28px; align-items:center;">
+          <div style="width:190px; height:190px;">
+            <canvas id="portfolioChart"></canvas>
+          </div>
+          <div style="flex:1;" id="portfolio-table"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Interactive Chat & Live Activity Feed -->
+    <div class="side-column">
+      <!-- Chat Panel -->
+      <div class="neo-card chat-window">
+        <div class="card-title">
+          <span>Venture Control Assistant</span>
+          <span style="font-size:11px; color:var(--text-muted);" id="chat-engine-label">Real Model</span>
+        </div>
+        <div class="chat-messages" id="chat-box">
+          <div class="chat-bubble bubble-mint">
+            MINT Assistant ready. I can adjust experiment goals, modify creative hooks, analyze profit reconciliation, or explain strategic decisions.
+          </div>
+        </div>
+        <div class="chat-input-bar">
+          <input type="text" id="chat-input" class="neo-input" placeholder="Give instruction or ask question..." onkeydown="if(event.key==='Enter') sendChatMessage()">
+          <button class="neo-btn neo-btn-primary" id="chat-send-button" onclick="sendChatMessage()">Send</button>
+        </div>
+      </div>
+
+      <!-- Calm Activity Log -->
+      <div class="neo-card">
+        <div class="card-title">
+          <span>Activity Log</span>
+          <span style="font-size:11px; color:var(--text-muted);">Verified Events</span>
+        </div>
+        <div class="activity-feed-list" id="activity-feed"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Start Modal -->
+  <div class="modal-overlay" id="start-modal">
+    <div class="modal-card">
+      <h3 style="margin-bottom:14px; font-size:17px; font-weight:600;">Launch Venture Run</h3>
+      <div style="margin-bottom:14px;">
+        <label style="font-size:12.5px; color:var(--text-muted); font-weight:500;">Venture Objective</label>
+        <input type="text" id="input-goal" class="neo-input" style="width:100%; margin-top:4px;" value="Find high-margin digital template for indie makers">
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="font-size:12.5px; color:var(--text-muted); font-weight:500;">Budget Limit ($)</label>
+        <input type="number" id="input-budget" class="neo-input" style="width:100%; margin-top:4px;" value="50.0">
+      </div>
+      <div style="margin-bottom:20px;">
+        <label style="font-size:12.5px; color:var(--text-muted); font-weight:500;">Reinvestment Portfolio Profile</label>
+        <select id="input-risk" class="neo-input" style="width:100%; margin-top:4px;">
+          <option value="conservative">Conservative (Preservation & Treasury Yield)</option>
+          <option value="balanced" selected>Balanced (Broad Index Diversification)</option>
+          <option value="growth">Growth (Thematic Tech & Innovation)</option>
+        </select>
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:10px;">
+        <button class="neo-btn" onclick="closeStartModal()">Cancel</button>
+        <button class="neo-btn neo-btn-primary" onclick="launchExperiment()">Execute Run</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Agent Inspection Modal -->
+  <div class="modal-overlay" id="inspect-modal">
+    <div class="modal-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h3 id="inspect-title" style="font-size:17px; font-weight:600;"></h3>
+        <span class="agent-status-tag" id="inspect-status-tag">Status</span>
+      </div>
+      <div style="margin-bottom:12px;">
+        <div style="font-size:11.5px; color:var(--text-muted); font-weight:500;">Current Task / Input</div>
+        <div id="inspect-input" style="font-size:12.5px; background:var(--surface-nested); color:var(--text-primary); padding:10px; border-radius:6px; border:1px solid var(--border-subtle); margin-top:2px;"></div>
+      </div>
+      <div style="margin-bottom:12px;">
+        <div style="font-size:11.5px; color:var(--text-muted); font-weight:500;">Output Produced / State</div>
+        <div id="inspect-output" style="font-size:12.5px; background:var(--surface-nested); color:var(--text-primary); padding:10px; border-radius:6px; border:1px solid var(--border-subtle); margin-top:2px;"></div>
+      </div>
+      <div style="margin-bottom:12px;">
+        <div style="font-size:11.5px; color:var(--text-muted); font-weight:500;">Decision Rationale</div>
+        <div id="inspect-reason" style="font-size:12.5px; color:var(--accent-teal); margin-top:2px; line-height:1.4;"></div>
+      </div>
+      <div id="inspect-error-row" style="margin-bottom:14px; display:none;">
+        <div style="font-size:11.5px; color:#c0392b; font-weight:500;">Blocker / Error Warning</div>
+        <div id="inspect-error" style="font-size:12px; background:var(--status-failed-bg); border:1px solid var(--status-failed-border); color:var(--status-failed-text); padding:8px 10px; border-radius:6px; margin-top:2px;"></div>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border-subtle); padding-top:12px; margin-top:10px;">
+        <span style="font-size:11px; color:var(--text-subtle);">Last updated: <span id="inspect-time">—</span></span>
+        <button class="neo-btn" onclick="document.getElementById('inspect-modal').style.display='none'">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/dashboard.js"></script>
+</body>
+</html>

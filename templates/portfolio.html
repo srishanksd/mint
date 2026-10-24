@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MINT — Venture Portfolio &amp; Capital Allocations</title>
+  <script>
+    (function() {
+      var theme = localStorage.getItem('mint_theme') || 'light';
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+  <link rel="stylesheet" href="/static/css/dashboard.css">
+  <style>
+    .portfolio-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    @media (max-width: 900px) {
+      .portfolio-grid { grid-template-columns: 1fr; }
+    }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .data-table th, .data-table td {
+      padding: 12px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .data-table th {
+      font-size: 11px;
+      text-transform: uppercase;
+      color: var(--text-subtle);
+      font-weight: 600;
+      background: var(--surface-pure);
+    }
+  </style>
+</head>
+<body>
+  <nav class="global-nav">
+    <div class="nav-links">
+      <a href="/" class="nav-link">Dashboard</a>
+      <a href="/studio" class="nav-link">Content Studio</a>
+      <a href="/products" class="nav-link">Digital Products</a>
+      <a href="/affiliates" class="nav-link">Affiliate Hub</a>
+      <a href="/portfolio" class="nav-link active">Venture Portfolio</a>
+      <a href="/storefront" class="nav-link" target="_blank">Storefront ↗</a>
+    </div>
+    <div style="display: flex; gap: 12px; align-items: center;">
+      <button id="theme-toggle-btn" class="theme-toggle-btn" onclick="toggleMINTTheme()">
+        <span id="theme-icon">🌙</span> <span id="theme-text">Dark Mode</span>
+      </button>
+    </div>
+  </nav>
+
+  <header>
+    <div>
+      <h1 class="brand-title">MINT Venture Portfolio</h1>
+      <p class="brand-subtitle">Autonomous Venture Track Record &amp; Paper Surplus Capital Management</p>
+    </div>
+  </header>
+
+  <!-- High-Level Portfolio Metrics -->
+  <div class="metrics-row">
+    <div class="metric-box">
+      <div class="metric-label">Digital Products in Market</div>
+      <div class="metric-value">{{ products|length }}</div>
+      <div class="metric-sub">Packaged digital deliverables</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-label">Affiliate Partner Offers</div>
+      <div class="metric-value">{{ offers|length }}</div>
+      <div class="metric-sub">Active tracked referral links</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-label">Rendered Content Assets</div>
+      <div class="metric-value">{{ content_jobs|length }}</div>
+      <div class="metric-sub">1080x1920 vertical video shorts</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-label">Real Customer Revenue</div>
+      <div class="metric-value" style="color: var(--accent-teal);">${{ "%.2f"|format(real_totals.gross or 0.0) }}</div>
+      <div class="metric-sub">Excluding sandbox test checkouts</div>
+    </div>
+  </div>
+
+  <div class="portfolio-grid">
+    <!-- Left Column: Paper Capital Reinvestment -->
+    <div class="neo-card">
+      <div class="card-title">
+        <span>Paper Surplus Allocations</span>
+        {% if paper_portfolio %}
+          <span class="status-pill connected">{{ paper_portfolio.risk_profile|upper }} MODEL</span>
+        {% endif %}
+      </div>
+
+      {% if paper_portfolio and paper_portfolio.allocations %}
+        <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px;">
+          Calculated paper distribution from eligible operating cash surplus (${{ "%.2f"|format(paper_portfolio.total_surplus) }}):
+        </p>
+
+        <div style="margin-bottom:20px;">
+          {% for a in paper_portfolio.allocations %}
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--border-subtle); font-size:13px;">
+              <div>
+                <strong>{{ a.ticker }}</strong> &middot; <span style="color:var(--text-muted);">{{ a.percentage }}%</span><br>
+                <span style="font-size:11.5px; color:var(--text-subtle);">{{ a.reason }}</span>
+              </div>
+              <div style="font-weight:600; font-size:14px; color:var(--text-primary);">
+                ${{ "%.2f"|format(a.amount) }}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+
+        {% if paper_portfolio.rebalancing_notes %}
+          <div style="font-size:12px; background:var(--surface-pure); padding:12px; border-radius:8px; border:1px solid var(--border-subtle); color:var(--text-muted);">
+            <strong>Rebalancing Guidance:</strong> {{ paper_portfolio.rebalancing_notes }}
+          </div>
+        {% endif %}
+      {% else %}
+        <div style="text-align:center; padding:36px 16px; color:var(--text-muted);">
+          <p style="font-size:14px; margin-bottom:6px;">No surplus allocation records yet.</p>
+          <p style="font-size:12.5px;">Surplus allocations are triggered when a venture yields verified operating cash profit beyond the 25% cash reserve.</p>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Right Column: Venture Performance Highlights -->
+    <div class="neo-card">
+      <div class="card-title">
+        <span>Active Digital Products &amp; Offers</span>
+      </div>
+
+      {% if products or offers %}
+        <div style="margin-bottom:16px;">
+          <h4 style="font-size:13px; color:var(--text-subtle); text-transform:uppercase; margin-bottom:10px;">Digital Products</h4>
+          {% for p in products[:3] %}
+            <div style="display:flex; justify-content:space-between; font-size:13px; padding:8px 0; border-bottom:1px solid var(--border-subtle);">
+              <span><a href="/products/{{ p.slug }}" style="color:var(--text-primary); text-decoration:none; font-weight:500;">{{ p.title }}</a></span>
+              <span style="color:var(--accent-teal); font-weight:600;">${{ "%.2f"|format(p.price) }}</span>
+            </div>
+          {% endfor %}
+        </div>
+
+        <div>
+          <h4 style="font-size:13px; color:var(--text-subtle); text-transform:uppercase; margin-bottom:10px;">Top Affiliate Offers</h4>
+          {% for o in offers[:3] %}
+            <div style="display:flex; justify-content:space-between; font-size:13px; padding:8px 0; border-bottom:1px solid var(--border-subtle);">
+              <span>{{ o.name }} <small style="color:var(--text-muted);">({{ o.vendor }})</small></span>
+              <span><strong>{{ o.clicks }}</strong> clicks &middot; <span style="color:var(--accent-teal);">${{ "%.2f"|format(o.commission_earned) }}</span></span>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div style="text-align:center; padding:36px 16px; color:var(--text-muted);">
+          <p style="font-size:14px;">No venture products or offers configured.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Historical Experiment Track Record -->
+  <div class="neo-card" style="margin-top:24px;">
+    <div class="card-title">
+      <span>Historical Venture Runs ({{ experiments|length }})</span>
+    </div>
+
+    {% if experiments %}
+      <div style="overflow-x:auto;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Venture Goal</th>
+              <th>Status</th>
+              <th>Model</th>
+              <th>Budget Cap</th>
+              <th>Actual Spend</th>
+              <th>Recommendation</th>
+              <th>Created</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for e in experiments %}
+              <tr>
+                <td><strong>#{{ e.id }}</strong></td>
+                <td>{{ e.goal }}</td>
+                <td>
+                  <span class="status-pill {% if e.status == 'completed' %}connected{% elif e.status == 'running' %}waiting{% endif %}">
+                    {{ e.status|upper }}
+                  </span>
+                </td>
+                <td>{{ e.business_model or 'evaluating' }}</td>
+                <td>${{ "%.2f"|format(e.budget_limit) }}</td>
+                <td>${{ "%.2f"|format(e.budget_used or 0.0) }}</td>
+                <td>{{ e.recommended_action or 'In Progress' }}</td>
+                <td style="color:var(--text-subtle); font-size:12px;">{{ e.created_at }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+  </div>
+
+  <script>
+    function initTheme() {
+      const saved = localStorage.getItem("mint_theme") || "light";
+      applyTheme(saved);
+    }
+    function applyTheme(theme) {
+      document.documentElement.setAttribute("data-theme", theme);
+      localStorage.setItem("mint_theme", theme);
+      const icon = document.getElementById("theme-icon");
+      const text = document.getElementById("theme-text");
+      if (icon && text) {
+        if (theme === "dark") {
+          icon.innerText = "☀️";
+          text.innerText = "Light Mode";
+        } else {
+          icon.innerText = "🌙";
+          text.innerText = "Dark Mode";
+        }
+      }
+    }
+    function toggleMINTTheme() {
+      const curr = document.documentElement.getAttribute("data-theme") || "light";
+      applyTheme(curr === "dark" ? "light" : "dark");
+    }
+    document.addEventListener("DOMContentLoaded", initTheme);
+  </script>
+</body>
+</html>
