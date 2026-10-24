@@ -1,7 +1,9 @@
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent
+load_dotenv(BASE_DIR / ".env")
 DATA_DIR = Path(os.getenv("MINT_DATA_DIR", BASE_DIR / "data"))
 GENERATED_DIR = Path(os.getenv("MINT_GENERATED_DIR", BASE_DIR / "generated"))
 

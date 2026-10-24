@@ -506,7 +506,7 @@ def init_db():
     CREATE TABLE IF NOT EXISTS youtube_schedules (
         id                      INTEGER PRIMARY KEY AUTOINCREMENT,
         enabled                 INTEGER DEFAULT 0,
-        timezone                TEXT DEFAULT 'UTC',
+        timezone                TEXT DEFAULT 'Asia/Kolkata',
         slot_1_time             TEXT DEFAULT '10:00',
         slot_2_time             TEXT DEFAULT '18:00',
         audience_timing_source  TEXT DEFAULT 'user_configured_studio',
@@ -545,6 +545,97 @@ def init_db():
     if "conversation_id" not in chat_cols:
         cursor.execute("ALTER TABLE chat_messages ADD COLUMN conversation_id TEXT DEFAULT 'default'")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_chat_messages_conv ON chat_messages(conversation_id)")
+
+    # ── LumiClip & YouTube Source Channels Tables ────────────────────────────
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS youtube_source_channels (
+        id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+        channel_id          TEXT UNIQUE NOT NULL,
+        title               TEXT NOT NULL,
+        handle              TEXT,
+        thumbnail_url       TEXT,
+        custom_url          TEXT,
+        rights_confirmed    INTEGER DEFAULT 0,
+        last_scanned_at     TEXT,
+        is_active           INTEGER DEFAULT 1,
+        is_test             INTEGER DEFAULT 0,
+        created_at          TEXT NOT NULL,
+        updated_at          TEXT NOT NULL
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS youtube_discovered_videos (
+        id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+        channel_id          TEXT NOT NULL,
+        video_id            TEXT UNIQUE NOT NULL,
+        title               TEXT NOT NULL,
+        description         TEXT,
+        published_at        TEXT,
+        thumbnail_url       TEXT,
+        status              TEXT DEFAULT 'discovered',
+        lumiclip_project_id TEXT,
+        is_test             INTEGER DEFAULT 0,
+        created_at          TEXT NOT NULL
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS lumiclip_projects (
+        id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+        project_id          TEXT UNIQUE NOT NULL,
+        video_url           TEXT NOT NULL,
+        video_title         TEXT,
+        source_channel_id   TEXT,
+        source_channel_name TEXT,
+        status              TEXT DEFAULT 'processing',
+        progress_pct        INTEGER DEFAULT 0,
+        clips_count         INTEGER DEFAULT 0,
+        raw_response_json   TEXT,
+        error_message       TEXT,
+        is_test             INTEGER DEFAULT 0,
+        created_at          TEXT NOT NULL,
+        updated_at          TEXT NOT NULL
+    )
+    """)
+
+    # YouTube clips additive columns for LumiClip integration
+    cursor.execute("PRAGMA table_info(youtube_clips)")
+    clip_cols = [row[1] for row in cursor.fetchall()]
+    if "lumiclip_clip_id" not in clip_cols:
+        cursor.execute("ALTER TABLE youtube_clips ADD COLUMN lumiclip_clip_id TEXT")
+    if "lumiclip_project_id" not in clip_cols:
+        cursor.execute("ALTER TABLE youtube_clips ADD COLUMN lumiclip_project_id TEXT")
+    if "virality_score" not in clip_cols:
+        cursor.execute("ALTER TABLE youtube_clips ADD COLUMN virality_score REAL DEFAULT 0.0")
+    if "virality_reason" not in clip_cols:
+        cursor.execute("ALTER TABLE youtube_clips ADD COLUMN virality_reason TEXT")
+    if "thumbnail_url" not in clip_cols:
+        cursor.execute("ALTER TABLE youtube_clips ADD COLUMN thumbnail_url TEXT")
+    if "approved_at" not in clip_cols:
+        cursor.execute("ALTER TABLE youtube_clips ADD COLUMN approved_at TEXT")
+    if "source_video_url" not in clip_cols:
+        cursor.execute("ALTER TABLE youtube_clips ADD COLUMN source_video_url TEXT")
+    if "youtube_video_id" not in clip_cols:
+        cursor.execute("ALTER TABLE youtube_clips ADD COLUMN youtube_video_id TEXT")
+    if "youtube_video_url" not in clip_cols:
+        cursor.execute("ALTER TABLE youtube_clips ADD COLUMN youtube_video_url TEXT")
+    if "published_at" not in clip_cols:
+        cursor.execute("ALTER TABLE youtube_clips ADD COLUMN published_at TEXT")
+
+    # YouTube schedules additive columns
+    cursor.execute("PRAGMA table_info(youtube_schedules)")
+    sched_cols = [row[1] for row in cursor.fetchall()]
+    if "auto_publish" not in sched_cols:
+        cursor.execute("ALTER TABLE youtube_schedules ADD COLUMN auto_publish INTEGER DEFAULT 0")
+    if "max_daily_posts" not in sched_cols:
+        cursor.execute("ALTER TABLE youtube_schedules ADD COLUMN max_daily_posts INTEGER DEFAULT 2")
+    if "queue_target" not in sched_cols:
+        cursor.execute("ALTER TABLE youtube_schedules ADD COLUMN queue_target INTEGER DEFAULT 6")
+    if "destination_channel_id" not in sched_cols:
+        cursor.execute("ALTER TABLE youtube_schedules ADD COLUMN destination_channel_id TEXT")
+    if "destination_channel_name" not in sched_cols:
+        cursor.execute("ALTER TABLE youtube_schedules ADD COLUMN destination_channel_name TEXT")
 
     # Safe idempotent migration of identified automated test records in database
     _classify_legacy_test_records(cursor)
