@@ -236,7 +236,8 @@ class YouTubeService:
         or export_ready dict if not connected.
         NOTE: private != public. Never mark published=True for private uploads.
         """
-        status = cls.get_status()
+        cls._reload_env_if_needed(force=True)
+        status = cls.get_status(force_refresh=True)
         if not status.get("can_upload"):
             return {
                 "success": False,
@@ -324,14 +325,36 @@ class InstagramService:
     """
 
     @classmethod
+    def _reload_env_if_needed(cls, force: bool = False):
+        import sys
+        if any(m in sys.modules for m in ["unittest", "pytest"]):
+            return
+        try:
+            from dotenv import load_dotenv
+            env_file = Path(__file__).resolve().parent.parent / ".env"
+            if env_file.exists():
+                load_dotenv(env_file, override=force)
+        except Exception:
+            pass
+
+    @classmethod
     def get_login_method(cls) -> str:
-        """Resolve the explicitly selected Meta login flow. Defaults to Instagram Login."""
-        raw = os.getenv("INSTAGRAM_LOGIN_METHOD", "instagram_login").strip().lower().replace("-", "_")
-        if raw in {"instagram", "instagram_login", "ig_login", "business_login_for_instagram"}:
-            return "instagram_login"
+        """Resolve the explicitly selected Meta login flow. Auto-detects Facebook/Meta token format."""
+        cls._reload_env_if_needed()
+        raw = os.getenv("INSTAGRAM_LOGIN_METHOD", "").strip().lower().replace("-", "_")
         if raw in {"facebook", "facebook_login", "fb_login", "facebook_login_for_business"}:
             return "facebook_login"
-        return "invalid"
+        if raw in {"instagram", "instagram_login", "ig_login", "business_login_for_instagram"}:
+            token = os.getenv("INSTAGRAM_ACCESS_TOKEN", "").strip()
+            # EAA... tokens are Facebook Graph API / System User tokens and will always fail on graph.instagram.com
+            if token.startswith("EAA"):
+                return "facebook_login"
+            return "instagram_login"
+        # If not specified, infer from token prefix
+        token = os.getenv("INSTAGRAM_ACCESS_TOKEN", "").strip()
+        if token.startswith("EAA"):
+            return "facebook_login"
+        return "instagram_login"
 
     @classmethod
     def get_api_version(cls) -> str:
@@ -357,9 +380,8 @@ class InstagramService:
             if not ig_user_id:
                 return {"ok": False, "error_message": "Facebook Login requires INSTAGRAM_ACCOUNT_ID."}
             endpoint = f"https://graph.facebook.com/{version}/{ig_user_id}"
-            # Meta deprecated the username field in newer Facebook Graph API versions.
-            # Fetch only supported identity fields; permission status is checked separately.
-            fields = "id,name"
+            # Instagram Business Accounts support id,name,username.
+            fields = "id,name,username"
         else:
             return {"ok": False, "error_message": "Invalid INSTAGRAM_LOGIN_METHOD. Use instagram_login or facebook_login."}
 
@@ -429,6 +451,12 @@ class InstagramService:
     @classmethod
     def get_status(cls, force_refresh: bool = False) -> Dict[str, Any]:
         global _ig_status_cache, _ig_status_cache_time, _ig_status_cache_key
+
+        if force_refresh:
+            cls._reload_env_if_needed(force=True)
+            _ig_status_cache = None
+            _ig_status_cache_time = 0
+            _ig_status_cache_key = None
 
         now = time.time()
         method = cls.get_login_method()
@@ -679,7 +707,8 @@ class InstagramService:
                 "caption": caption,
             }
 
-        status = cls.get_status()
+        cls._reload_env_if_needed(force=True)
+        status = cls.get_status(force_refresh=True)
         if not status.get("can_publish"):
             return {
                 "success": False,
@@ -709,7 +738,19 @@ class InstagramService:
 
             res = requests.post(container_url, data=container_payload, headers=auth_headers, timeout=(3, 20))
             if res.status_code != 200:
-                err = res.json().get("error", {}).get("message", res.text)
+                try:
+                    err_json = res.json().get("error", {})
+                except Exception:
+                    err_json = {}
+                err = err_json.get("message", res.text)
+                subcode = err_json.get("error_subcode")
+                if subcode == 33 or "Unsupported post request" in str(err) or "does not support this operation" in str(err):
+                    err = (
+                        f"Meta rejected target account ID '{ig_user_id}'. "
+                        "Meta Graph API requires an Instagram Professional/Business Account ID (a numeric ID starting with 1784...), "
+                        "not a Facebook User ID. In Meta Business Suite (business.facebook.com), go to System Users > 'srish' > Add Assets, "
+                        "assign your Instagram account, and set INSTAGRAM_ACCOUNT_ID to that Instagram Account ID in .env."
+                    )
                 return {
                     "success": False,
                     "status": "failed",
@@ -829,7 +870,8 @@ class InstagramService:
                     "caption": caption,
                 }
 
-        status = cls.get_status()
+        cls._reload_env_if_needed(force=True)
+        status = cls.get_status(force_refresh=True)
         if not status.get("can_publish"):
             return {
                 "success": False,
@@ -857,7 +899,18 @@ class InstagramService:
                 }
                 child_res = requests.post(child_endpoint, data=child_payload, headers=auth_headers, timeout=(3, 20))
                 if child_res.status_code != 200:
-                    err = child_res.json().get("error", {}).get("message", child_res.text)
+                    try:
+                        err_json = child_res.json().get("error", {})
+                    except Exception:
+                        err_json = {}
+                    err = err_json.get("message", child_res.text)
+                    subcode = err_json.get("error_subcode")
+                    if subcode == 33 or "Unsupported post request" in str(err) or "does not support this operation" in str(err):
+                        err = (
+                            f"Meta rejected target account ID '{ig_user_id}'. "
+                            "Meta Graph API requires an Instagram Professional/Business Account ID (a numeric ID starting with 1784...), "
+                            "not a Facebook User ID. In Meta Business Suite, assign your Instagram account to the System User under 'Assets' and put the Instagram Account ID in INSTAGRAM_ACCOUNT_ID."
+                        )
                     return {"success": False, "status": "failed", "error": f"Child container creation failed: {err}"}
                 cid = child_res.json().get("id")
                 if not cid:

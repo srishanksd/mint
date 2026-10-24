@@ -283,6 +283,7 @@ class YouTubeClippingService:
             "-crf", "22",
             "-c:a", "aac",
             "-b:a", "128k",
+            "-movflags", "+faststart",
             str(out_mp4)
         ]
 
@@ -399,16 +400,26 @@ class YouTubeClippingService:
         if op:
             target = Path(op).resolve()
             base_dir = get_clips_base_dir().resolve()
+            gen_dir = Path(getattr(config, "GENERATED_DIR", None) or Path(__file__).resolve().parent.parent / "generated").resolve()
+            is_safe = False
+            for safe_dir in (base_dir, gen_dir):
+                try:
+                    target.relative_to(safe_dir)
+                    is_safe = True
+                    break
+                except ValueError:
+                    pass
+
+            if not is_safe:
+                conn.close()
+                return {"success": False, "error": "Refusing to delete file outside clips directory."}
+
             try:
-                target.relative_to(base_dir)
                 if target.exists() and target.is_file():
                     target.unlink()
                 parent = target.parent
-                if parent != base_dir and parent.exists() and not any(parent.iterdir()):
+                if parent not in (base_dir, gen_dir) and parent.exists() and not any(parent.iterdir()):
                     parent.rmdir()
-            except ValueError:
-                conn.close()
-                return {"success": False, "error": "Refusing to delete file outside clips directory."}
             except Exception as e:
                 logger.warning("Error deleting clip file: %s", e)
 
