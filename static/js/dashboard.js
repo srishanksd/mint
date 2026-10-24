@@ -377,6 +377,11 @@ function updateIntegrationBadges(integrations) {
 
   refreshYouTubeStatus();
   refreshInstagramStatus(ig);
+  if (integrations.lumiclip) {
+    checkLumiClip(integrations.lumiclip);
+  } else {
+    checkLumiClip();
+  }
 }
 
 /* Portfolio Chart Rendering */
@@ -1074,5 +1079,59 @@ async function checkInstagram() {
       button.disabled = false;
       button.innerText = previousText === "Checking…" ? "Check Connection" : previousText;
     }
+  }
+}
+
+async function checkLumiClip(cachedData) {
+  const pill = document.getElementById("pill-lumiclip");
+  const desc = document.getElementById("desc-lumiclip");
+  const info = document.getElementById("lumiclip-info");
+  if (!pill) return;
+
+  function renderData(data) {
+    if (data.status === "connected") {
+      pill.className = "status-pill connected";
+      pill.innerText = "Connected";
+      if (desc) desc.innerText = `Plan: ${data.plan || 'Standard'} • ${data.credits_remaining !== null ? data.credits_remaining + ' credits remaining' : 'Active'}`;
+      if (info) {
+        info.style.display = "block";
+        info.innerHTML = `<div><strong>Plan:</strong> ${data.plan || 'Standard'} &middot; <strong>Credits:</strong> ${data.credits_remaining !== null ? data.credits_remaining : 'Unlimited'} remaining</div>`;
+      }
+    } else if (data.status === "credits_low") {
+      pill.className = "status-pill warning";
+      pill.innerText = "Credits Low";
+      if (desc) desc.innerText = `Low credits: ${data.credits_remaining} remaining. Top up before long runs.`;
+    } else if (data.status === "credits_exhausted") {
+      pill.className = "status-pill failed";
+      pill.innerText = "Exhausted";
+      if (desc) desc.innerText = "LumiClip credits exhausted. Top up your plan at lumiclip.ai.";
+    } else if (data.status === "token_invalid") {
+      pill.className = "status-pill failed";
+      pill.innerText = "Token Invalid";
+      if (desc) desc.innerText = "LumiClip API key was rejected (HTTP 401). Verify LUMICLIP_API_KEY in .env.";
+    } else {
+      pill.className = "status-pill waiting";
+      pill.innerText = "Not Configured";
+      if (desc) desc.innerText = data.message || "Add LUMICLIP_API_KEY to your .env file.";
+      if (info) info.style.display = "none";
+    }
+  }
+
+  if (cachedData && typeof cachedData === "object" && cachedData.status) {
+    renderData(cachedData);
+    return;
+  }
+
+  pill.className = "status-pill";
+  pill.innerText = "Checking…";
+
+  try {
+    const res = await fetch("/api/lumiclip/usage?refresh=1");
+    const data = await res.json();
+    renderData(data);
+  } catch (err) {
+    pill.className = "status-pill failed";
+    pill.innerText = "Error";
+    if (desc) desc.innerText = "Could not check LumiClip status.";
   }
 }

@@ -2,33 +2,33 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
 
 :root {
-  /* Surfaces & Canvas */
-  --bg-canvas: #f0f2f5;
-  --surface-raised: #f0f2f5;
+  /* Surfaces & Canvas — Clean Restrained Palette */
+  --bg-canvas: #f6f7f9;
+  --surface-raised: #ffffff;
   --surface-pure: #ffffff;
   --surface-card: #ffffff;
-  --surface-nested: #f7f8fa;
-  --surface-inset: #eef0f3;
+  --surface-nested: #f8f9fa;
+  --surface-inset: #f1f3f5;
 
   /* Typography */
-  --text-primary: #111827;
-  --text-secondary: #374151;
-  --text-muted: #6b7280;
+  --text-primary: #202938;
+  --text-secondary: #4b5563;
+  --text-muted: #667085;
   --text-subtle: #9ca3af;
 
   /* Borders */
   --border-subtle: #e5e7eb;
   --border-medium: #d1d5db;
-  --card-border-light: rgba(255, 255, 255, 0.9);
+  --card-border-light: #e5e7eb;
 
-  /* Brand Accents — Professional Indigo/Slate */
+  /* Brand Accents — Professional Indigo used sparingly */
   --accent-teal: #4f46e5;
   --accent-teal-subtle: #eef2ff;
   --accent-teal-text: #3730a3;
-  --accent-navy: #111827;
+  --accent-navy: #1f2937;
   --status-neutral: #6b7280;
 
-  /* Agent Node State Surfaces & Borders */
+  /* Node State Surfaces & Borders */
   --status-waiting-bg: #ffffff;
   --status-waiting-border: #e5e7eb;
   --status-waiting-text: #6b7280;
@@ -54,30 +54,30 @@
   --status-review-text: #b45309;
 
   /* Chat System */
-  --chat-bg: #f7f8fa;
+  --chat-bg: #f8f9fa;
   --chat-bubble-user-bg: #4f46e5;
   --chat-bubble-user-text: #ffffff;
   --chat-bubble-mint-bg: #ffffff;
-  --chat-bubble-mint-text: #111827;
+  --chat-bubble-mint-text: #202938;
   --chat-bubble-mint-border: #e5e7eb;
 
   /* Modals & Overlays */
-  --modal-overlay-bg: rgba(17, 24, 39, 0.5);
+  --modal-overlay-bg: rgba(17, 24, 39, 0.45);
 
-  /* Neomorphic Shadows */
-  --shadow-raised: 4px 4px 12px #d9dce0, -4px -4px 12px #ffffff;
-  --shadow-inset: inset 2px 2px 5px #d9dce0, inset -2px -2px 5px #ffffff;
-  --shadow-card: 0 1px 4px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  /* Subtle Shadows */
+  --shadow-raised: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-inset: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 [data-theme="dark"] {
   /* Surfaces & Canvas */
-  --bg-canvas: #090d16;
-  --surface-raised: #0f172a;
+  --bg-canvas: #0f172a;
+  --surface-raised: #1e293b;
   --surface-pure: #1e293b;
-  --surface-card: #182234;
-  --surface-nested: #111a2c;
-  --surface-inset: #0b1120;
+  --surface-card: #1e293b;
+  --surface-nested: #162032;
+  --surface-inset: #111827;
 
   /* Typography */
   --text-primary: #f8fafc;
@@ -86,9 +86,9 @@
   --text-subtle: #64748b;
 
   /* Borders */
-  --border-subtle: #2d3b55;
-  --border-medium: #3f5175;
-  --card-border-light: rgba(45, 59, 85, 0.8);
+  --border-subtle: #334155;
+  --border-medium: #475569;
+  --card-border-light: #334155;
 
   /* Brand Accents */
   --accent-teal: #818cf8;
@@ -97,10 +97,10 @@
   --accent-navy: #f9fafb;
   --status-neutral: #9ca3af;
 
-  /* Agent Node State Surfaces & Borders in Dark Mode */
-  --status-waiting-bg: #1f2937;
-  --status-waiting-border: #374151;
-  --status-waiting-text: #9ca3af;
+  /* Node State Surfaces & Borders in Dark Mode */
+  --status-waiting-bg: #1e293b;
+  --status-waiting-border: #334155;
+  --status-waiting-text: #94a3b8;
 
   --status-running-bg: #1e3a5f;
   --status-running-border: #60a5fa;
@@ -126,17 +126,17 @@
   --chat-bg: #111827;
   --chat-bubble-user-bg: #4f46e5;
   --chat-bubble-user-text: #ffffff;
-  --chat-bubble-mint-bg: #1f2937;
+  --chat-bubble-mint-bg: #1e293b;
   --chat-bubble-mint-text: #f9fafb;
-  --chat-bubble-mint-border: #374151;
+  --chat-bubble-mint-border: #334155;
 
   /* Modals & Overlays */
   --modal-overlay-bg: rgba(0, 0, 0, 0.75);
 
   /* Shadows */
-  --shadow-raised: 4px 4px 12px #04070e, -4px -4px 12px #151e30;
-  --shadow-inset: inset 2px 2px 5px #04070e, inset -2px -2px 5px #151e30;
-  --shadow-card: 0 2px 6px rgba(0,0,0,0.5);
+  --shadow-raised: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-inset: inset 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 * {
@@ -287,21 +287,21 @@ button:disabled {
   cursor: wait;
 }
 
-/* Neomorphic Cards */
+/* Cards & Containers — Clean Minimal Styling */
 .neo-card {
-  background: var(--surface-raised);
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: var(--shadow-raised);
-  margin-bottom: 24px;
-  border: 1px solid var(--card-border-light);
+  background: var(--surface-card);
+  border-radius: 8px;
+  padding: 20px 22px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  margin-bottom: 20px;
+  border: 1px solid var(--border-subtle);
 }
 
 .card-title {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
-  margin-bottom: 18px;
+  margin-bottom: 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -311,19 +311,19 @@ button:disabled {
 .metrics-row {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 16px;
-  margin-bottom: 24px;
+  gap: 14px;
+  margin-bottom: 20px;
   align-items: stretch;
 }
 
 .metric-box {
   min-width: 0;
-  min-height: 132px;
-  background: var(--surface-raised);
-  border-radius: 12px;
-  padding: 18px 16px;
-  box-shadow: var(--shadow-raised);
-  border: 1px solid var(--card-border-light);
+  min-height: 110px;
+  background: var(--surface-card);
+  border-radius: 8px;
+  padding: 14px 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--border-subtle);
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
