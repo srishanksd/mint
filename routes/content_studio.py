@@ -1,6 +1,7 @@
 import os
 import json
 import shutil
+from datetime import datetime
 from pathlib import Path
 from flask import Blueprint, request, jsonify, render_template, send_from_directory, send_file, abort
 
@@ -180,6 +181,121 @@ def api_delete_image(image_id: int):
     res = AIImageService.delete_image(image_id)
     status_code = 200 if res.get("success") else 400
     return jsonify(res), status_code
+
+
+@content_studio_bp.route("/api/images/<int:image_id>/publish_instagram", methods=["POST"])
+def api_publish_image_to_instagram(image_id: int):
+    """
+    Publishes a standalone generated AI image directly to Instagram.
+    Enforces:
+      1. Explicit confirmation (confirmed=True)
+      2. Image existence and readability
+      3. Public HTTPS hosting (Cloudinary)
+      4. Instagram connected status
+      5. Meta Graph API container creation & publishing
+      6. Automatic record tracking in instagram_posts
+    """
+    data = request.get_json(silent=True) or {}
+    confirmed = bool(data.get("confirmed", False))
+    caption = str(data.get("caption", "")).strip()
+
+    if not confirmed:
+        return jsonify({
+            "success": False,
+            "status": "confirmation_required",
+            "error": "Publishing to Instagram requires explicit confirmation. Set confirmed: true."
+        }), 400
+
+    img = AIImageService.get_image(image_id)
+    if not img:
+        return jsonify({"success": False, "status": "not_found", "error": f"Image #{image_id} not found."}), 404
+
+    file_path = img.get("file_path")
+    if not file_path or not Path(file_path).exists():
+        return jsonify({"success": False, "status": "file_missing", "error": "Image file does not exist on disk."}), 400
+
+    if not caption:
+        prompt_preview = (img.get("prompt") or "AI Artwork").strip()
+        caption = f"{prompt_preview}\n\n#mint #aiart #flux"
+
+    # Step A: Media hosting check
+    hosting_status = MediaHostingService.get_status()
+    if not hosting_status.get("can_host"):
+        return jsonify({
+            "success": False,
+            "status": "media_hosting_required",
+            "error": hosting_status.get("message", "Media hosting required."),
+            "setup_required": hosting_status.get("setup_required", [])
+        }), 400
+
+    # Step B: Upload local image to public HTTPS host
+    upload_res = MediaHostingService.upload_image(file_path)
+    if not upload_res.get("success") or not upload_res.get("public_url"):
+        return jsonify({
+            "success": False,
+            "status": "media_upload_failed",
+            "error": f"Failed uploading image to public host: {upload_res.get('error', 'Unknown upload error')}"
+        }), 400
+
+    public_url = upload_res["public_url"]
+
+    # Step C: Publish through InstagramService
+    pub_res = InstagramService.publish_media(
+        media_url_or_path=public_url,
+        caption=caption,
+        media_type="IMAGE",
+        confirmed=True
+    )
+
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    if pub_res.get("success"):
+        media_id = pub_res.get("media_id")
+        try:
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute("""
+                INSERT INTO instagram_posts (
+                    product_id, post_type, title, caption, hashtags, cta,
+                    image_paths_json, hosted_urls_json,
+                    status, media_id, published_at, is_test, created_at, updated_at
+                ) VALUES (
+                    NULL, 'single', ?, ?, '', '',
+                    ?, ?,
+                    'published', ?, ?, ?, ?, ?
+                )
+            """, (
+                f"Image #{image_id}: {(img.get('prompt') or '')[:40]}",
+                caption,
+                json.dumps([str(file_path)]),
+                json.dumps([public_url]),
+                media_id,
+                now_str,
+                int(img.get("is_test", 0)),
+                now_str,
+                now_str
+            ))
+            conn.commit()
+            conn.close()
+        except Exception:
+            pass
+
+        return jsonify({
+            "success": True,
+            "status": "published",
+            "image_id": image_id,
+            "media_id": media_id,
+            "public_url": public_url,
+            "message": f"Successfully published image #{image_id} to Instagram! Media ID: {media_id}"
+        }), 200
+    else:
+        err = pub_res.get("error", "Instagram publishing failed.")
+        return jsonify({
+            "success": False,
+            "status": pub_res.get("status", "failed"),
+            "error": err,
+            "image_id": image_id
+        }), 400
 
 
 @content_studio_bp.route("/api/images/<int:image_id>/file", methods=["GET"])

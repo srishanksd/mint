@@ -738,15 +738,23 @@ def youtube_serve_clip_file(clip_id: int):
 
     file_path = Path(clip["output_path"]).resolve()
     base_dir = get_clips_base_dir().resolve()
-    try:
-        file_path.relative_to(base_dir)
-    except ValueError:
+    gen_dir = Path(getattr(config, "GENERATED_DIR", None) or Path(__file__).resolve().parent.parent / "generated").resolve()
+    is_safe = False
+    for safe_dir in (base_dir, gen_dir):
+        try:
+            file_path.relative_to(safe_dir)
+            is_safe = True
+            break
+        except ValueError:
+            pass
+
+    if not is_safe:
         abort(403)
 
-    if not file_path.exists():
+    if not file_path.exists() or not file_path.is_file():
         abort(404)
 
-    return send_file(str(file_path), mimetype="video/mp4")
+    return send_file(str(file_path), mimetype="video/mp4", conditional=True)
 
 
 @youtube_auth_bp.route("/api/youtube/clips/<int:clip_id>", methods=["DELETE"])

@@ -4,6 +4,7 @@ import json
 from database import get_db_connection
 from services.social_service import YouTubeService, InstagramService
 from services.ai_service import AIService
+from services.lumiclip_service import LumiClipService
 import config
 from pathlib import Path
 
@@ -40,7 +41,8 @@ def api_overview():
             "integrations": {
                 "youtube": YouTubeService.get_status(),
                 "instagram": InstagramService.get_status(),
-                "ai": AIService.get_provider_status()
+                "ai": AIService.get_provider_status(),
+                "lumiclip": LumiClipService.get_status()
             }
         })
 
@@ -129,7 +131,8 @@ def api_overview():
         "integrations": {
             "youtube": YouTubeService.get_status(),
             "instagram": InstagramService.get_status(),
-            "ai": AIService.get_provider_status()
+            "ai": AIService.get_provider_status(),
+            "lumiclip": LumiClipService.get_status()
         }
     })
 
@@ -281,7 +284,7 @@ def youtube_channel_info():
 
 @dashboard_bp.route("/api/instagram/status")
 def instagram_status():
-    """Return a safe Instagram diagnostic; refresh=1 bypasses the status cache."""
-    force_refresh = request.args.get("refresh") == "1"
+    """Return a safe Instagram diagnostic; refresh=1 or force_refresh=1 bypasses the status cache."""
+    force_refresh = request.args.get("refresh") == "1" or request.args.get("force_refresh") == "1"
     status = InstagramService.get_status(force_refresh=force_refresh)
     return jsonify(status)
