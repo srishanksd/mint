@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch, MagicMock
 import os
 import json
 import shutil
@@ -2088,7 +2089,32 @@ class TestMINTContentStudioAndImageGeneration(unittest.TestCase):
             self.assertEqual(file_resp.mimetype, "image/jpeg")
             file_resp.close()
 
-            # Test delete image
+            # Test publish image to Instagram requires confirmation
+            unconfirmed_resp = client.post(f"/api/images/{img_id}/publish_instagram", json={"confirmed": False})
+            self.assertEqual(unconfirmed_resp.status_code, 400)
+            self.assertEqual(unconfirmed_resp.get_json()["status"], "confirmation_required")
+
+            # Test publish image to Instagram with explicit confirmation and mocked external services
+            with patch("services.media_hosting_service.MediaHostingService.get_status", return_value={"can_host": True, "configured": True, "provider_label": "Cloudinary"}), \
+                 patch("services.media_hosting_service.MediaHostingService.upload_image", return_value={"success": True, "public_url": "https://res.cloudinary.com/test.jpg"}), \
+                 patch("services.social_service.InstagramService.publish_media", return_value={"success": True, "status": "published", "media_id": "meta_img_123"}):
+                pub_resp = client.post(f"/api/images/{img_id}/publish_instagram", json={"confirmed": True, "caption": "Awesome AI art #mint"})
+                self.assertEqual(pub_resp.status_code, 200)
+                self.assertTrue(pub_resp.get_json()["success"])
+                self.assertEqual(pub_resp.get_json()["media_id"], "meta_img_123")
+
+            # Test delete image is safely blocked while referenced by the published Instagram post
+            del_blocked_resp = client.delete(f"/api/images/{img_id}")
+            self.assertEqual(del_blocked_resp.status_code, 400)
+            self.assertIn("referenced by Instagram post", del_blocked_resp.get_json().get("error", ""))
+
+            # Remove referencing Instagram test post to test unblocked image deletion
+            from database import get_db_connection
+            with get_db_connection() as conn:
+                conn.execute("DELETE FROM instagram_posts WHERE title LIKE ?", (f"Image #{img_id}:%",))
+                conn.commit()
+
+            # Test delete image succeeds now that reference is removed
             del_resp = client.delete(f"/api/images/{img_id}")
             self.assertEqual(del_resp.status_code, 200)
 
@@ -2625,6 +2651,971 @@ class TestMINTFinalIntegrationAndAutomation(unittest.TestCase):
         self.assertTrue(ref_vid.exists())
 
 
+class TestMINTLumiClipAndYouTubeClipsAgent(unittest.TestCase):
+    """
+    Unit and integration tests for:
+    - LumiClipService (REST API client, caching, quotas, token/rate limits, MP4 validation)
+    - YouTubeClipsAgent (source channels, rights confirmation, video discovery, polling, review queue)
+    - Twice-daily scheduling with Asia/Kolkata timezone and auto-publish
+    - YouTube Clips routes and endpoints
+    - Complete isolation with zero test pollution in data/mint.db
+    """
+
+    def setUp(self):
+        import tempfile
+        from pathlib import Path
+        import config
+        from database import init_db
+
+        self.temp_dir = tempfile.mkdtemp()
+        self.orig_db_path = getattr(config, "DB_PATH", None)
+        self.orig_gen_dir = getattr(config, "GENERATED_DIR", None)
+
+        test_db = Path(self.temp_dir) / "test_mint_lumiclip.db"
+        test_gen = Path(self.temp_dir) / "generated"
+        test_gen.mkdir(parents=True, exist_ok=True)
+
+        config.DB_PATH = test_db
+        config.GENERATED_DIR = test_gen
+        init_db()
+
+    def tearDown(self):
+        import shutil
+        import config
+        if self.orig_db_path:
+            config.DB_PATH = self.orig_db_path
+        if self.orig_gen_dir:
+            config.GENERATED_DIR = self.orig_gen_dir
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def test_lumiclip_service_status_and_usage(self):
+        """Tests LumiClipService.get_status() across all states with mock responses."""
+        from unittest.mock import patch, MagicMock
+        from services.lumiclip_service import LumiClipService
+        import requests
+
+        # Reset cache
+        import services.lumiclip_service as lcs_mod
+        lcs_mod._USAGE_CACHE = None
+        lcs_mod._USAGE_CACHE_TIME = 0
+
+        # 1. Unconfigured
+        with patch.object(LumiClipService, "get_api_key", return_value=""):
+            status = LumiClipService.get_status(force_refresh=True)
+            self.assertEqual(status["status"], "not_configured")
+            self.assertIsNone(status["credits_remaining"])
+            self.assertFalse(status["can_clip"])
+
+        # 2. Connected with healthy credits (> 15)
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.text = '{"plan": "creator_pro", "credits_remaining": 65}'
+        mock_resp.json.return_value = {"plan": "creator_pro", "credits_remaining": 65}
+        with patch.object(LumiClipService, "get_api_key", return_value="lumi_test_key_123"), \
+             patch("services.lumiclip_service.requests.get", return_value=mock_resp):
+            status = LumiClipService.get_status(force_refresh=True)
+            self.assertEqual(status["status"], "connected")
+            self.assertEqual(status["credits_remaining"], 65)
+            self.assertEqual(status["plan"], "creator_pro")
+            self.assertTrue(status["can_clip"])
+
+        # 3. Credits low (<= 15)
+        mock_resp.text = '{"plan": "starter", "credits_remaining": 12}'
+        mock_resp.json.return_value = {"plan": "starter", "credits_remaining": 12}
+        with patch.object(LumiClipService, "get_api_key", return_value="lumi_test_key_123"), \
+             patch("services.lumiclip_service.requests.get", return_value=mock_resp):
+            status = LumiClipService.get_status(force_refresh=True)
+            self.assertEqual(status["status"], "credits_low")
+            self.assertEqual(status["credits_remaining"], 12)
+            self.assertTrue(status["can_clip"])
+
+        # 4. Credits exhausted (== 0)
+        mock_resp.text = '{"plan": "starter", "credits_remaining": 0}'
+        mock_resp.json.return_value = {"plan": "starter", "credits_remaining": 0}
+        with patch.object(LumiClipService, "get_api_key", return_value="lumi_test_key_123"), \
+             patch("services.lumiclip_service.requests.get", return_value=mock_resp):
+            status = LumiClipService.get_status(force_refresh=True)
+            self.assertEqual(status["status"], "credits_exhausted")
+            self.assertEqual(status["credits_remaining"], 0)
+            self.assertFalse(status["can_clip"])
+
+        # 5. Invalid token (401)
+        mock_resp_401 = MagicMock()
+        mock_resp_401.status_code = 401
+        with patch.object(LumiClipService, "get_api_key", return_value="invalid_key"), \
+             patch("services.lumiclip_service.requests.get", return_value=mock_resp_401):
+            status = LumiClipService.get_status(force_refresh=True)
+            self.assertEqual(status["status"], "token_invalid")
+            self.assertFalse(status["can_clip"])
+
+        # 6. Rate limited (429)
+        mock_resp_429 = MagicMock()
+        mock_resp_429.status_code = 429
+        with patch.object(LumiClipService, "get_api_key", return_value="lumi_test_key_123"), \
+             patch("services.lumiclip_service.requests.get", return_value=mock_resp_429):
+            status = LumiClipService.get_status(force_refresh=True)
+            self.assertEqual(status["status"], "rate_limited")
+
+        # 7. Connection error / timeout
+        with patch.object(LumiClipService, "get_api_key", return_value="lumi_test_key_123"), \
+             patch("services.lumiclip_service.requests.get", side_effect=requests.exceptions.ConnectionError("Network down")):
+            status = LumiClipService.get_status(force_refresh=True)
+            self.assertEqual(status["status"], "service_temporarily_unavailable")
+
+    def test_lumiclip_service_generate_and_poll(self):
+        """Tests LumiClip project submission and polling methods."""
+        from unittest.mock import patch, MagicMock
+        from services.lumiclip_service import LumiClipService
+
+        # Invalid URL returns invalid_url status
+        inv_res = LumiClipService.submit_clipping_project("https://vimeo.com/123456")
+        self.assertFalse(inv_res["success"])
+        self.assertEqual(inv_res["status"], "invalid_url")
+
+        # Successful project submission
+        mock_post = MagicMock()
+        mock_post.status_code = 200
+        mock_post.text = '{"project_id": "proj_abc_789", "status": "processing"}'
+        mock_post.json.return_value = {"project_id": "proj_abc_789", "status": "processing"}
+        with patch.object(LumiClipService, "get_api_key", return_value="lumi_test_key_123"), \
+             patch.object(LumiClipService, "get_status", return_value={"can_clip": True, "status": "connected"}), \
+             patch("services.lumiclip_service.requests.post", return_value=mock_post) as mock_p:
+            res = LumiClipService.submit_clipping_project("https://www.youtube.com/watch?v=dQw4w9WgXcQ", title="Rick Astley")
+            self.assertTrue(res["success"])
+            self.assertEqual(res["project_id"], "proj_abc_789")
+            self.assertEqual(res["status"], "processing")
+            # Verify endpoint and Authorization header
+            call_url = mock_p.call_args[0][0]
+            call_headers = mock_p.call_args[1]["headers"]
+            self.assertIn("/api/v1/clips/generate", call_url)
+            self.assertEqual(call_headers["Authorization"], "Bearer lumi_test_key_123")
+
+        # Poll project details
+        mock_get_proj = MagicMock()
+        mock_get_proj.status_code = 200
+        mock_get_proj.text = '{"status": "completed", "clips": [{"id": "clip_1", "title": "Viral Hook", "virality_score": 92}]}'
+        mock_get_proj.json.return_value = {
+            "status": "completed",
+            "clips": [{"id": "clip_1", "title": "Viral Hook", "virality_score": 92}]
+        }
+        with patch.object(LumiClipService, "get_api_key", return_value="lumi_test_key_123"), \
+             patch("services.lumiclip_service.requests.get", return_value=mock_get_proj):
+            proj = LumiClipService.get_project("proj_abc_789")
+            self.assertTrue(proj["success"])
+            self.assertEqual(proj["status"], "completed")
+            self.assertEqual(len(proj["clips"]), 1)
+
+    def test_lumiclip_export_and_download_validation(self):
+        """Tests clip export and MP4 file verification (size and container magic bytes)."""
+        from unittest.mock import patch, MagicMock
+        from services.lumiclip_service import LumiClipService
+        from pathlib import Path
+
+        # Export clip
+        mock_export = MagicMock()
+        mock_export.status_code = 200
+        mock_export.text = '{"export_id": "exp_456", "status": "ready"}'
+        mock_export.json.return_value = {"export_id": "exp_456", "status": "ready"}
+        with patch.object(LumiClipService, "get_api_key", return_value="lumi_test_key_123"), \
+             patch("services.lumiclip_service.requests.post", return_value=mock_export):
+            exp = LumiClipService.export_clip("clip_1", quality="720p")
+            self.assertTrue(exp["success"])
+            self.assertEqual(exp["status"], "ready")
+
+        # Download URL
+        mock_down_url = MagicMock()
+        mock_down_url.status_code = 200
+        mock_down_url.text = '{"download_url": "https://cdn.lumiclip.ai/signed/clip_1.mp4"}'
+        mock_down_url.json.return_value = {"download_url": "https://cdn.lumiclip.ai/signed/clip_1.mp4"}
+        with patch.object(LumiClipService, "get_api_key", return_value="lumi_test_key_123"), \
+             patch("services.lumiclip_service.requests.get", return_value=mock_down_url):
+            dl_res = LumiClipService.get_download_url("clip_1")
+            self.assertTrue(dl_res["success"])
+            self.assertEqual(dl_res["download_url"], "https://cdn.lumiclip.ai/signed/clip_1.mp4")
+
+        # Download and verify valid MP4
+        valid_dest = Path(self.temp_dir) / "clips" / "valid_clip.mp4"
+        valid_mp4_bytes = b"\x00\x00\x00\x18ftypisom" + b"A" * 15000
+        mock_stream = MagicMock()
+        mock_stream.status_code = 200
+        mock_stream.__enter__.return_value = mock_stream
+        mock_stream.__exit__.return_value = None
+        mock_stream.iter_content.return_value = [valid_mp4_bytes]
+
+        with patch("services.lumiclip_service.requests.get", return_value=mock_stream):
+            res_val = LumiClipService.download_and_verify_mp4("https://cdn.lumiclip.ai/signed/clip_1.mp4", valid_dest)
+            self.assertTrue(res_val["success"])
+            self.assertTrue(Path(res_val["file_path"]).exists())
+            self.assertGreater(Path(res_val["file_path"]).stat().st_size, 10240)
+
+        # Corrupted MP4 (missing ftyp magic bytes)
+        corrupt_dest = Path(self.temp_dir) / "clips" / "corrupted_clip.mp4"
+        corrupted_bytes = b"CORRUPTED_STREAM_HEADER" + b"X" * 15000
+        mock_stream_corrupted = MagicMock()
+        mock_stream_corrupted.status_code = 200
+        mock_stream_corrupted.__enter__.return_value = mock_stream_corrupted
+        mock_stream_corrupted.__exit__.return_value = None
+        mock_stream_corrupted.iter_content.return_value = [corrupted_bytes]
+
+        with patch("services.lumiclip_service.requests.get", return_value=mock_stream_corrupted):
+            res_bad = LumiClipService.download_and_verify_mp4("https://cdn.lumiclip.ai/signed/clip_corrupted.mp4", corrupt_dest)
+            self.assertFalse(res_bad["success"])
+            self.assertIn("does not contain standard MP4 container", res_bad["error"])
+            self.assertFalse(corrupt_dest.exists())
+
+        # Too small file (< 10KB)
+        small_dest = Path(self.temp_dir) / "clips" / "small_clip.mp4"
+        small_bytes = b"\x00\x00\x00\x18ftyp" + b"X" * 500
+        mock_stream_small = MagicMock()
+        mock_stream_small.status_code = 200
+        mock_stream_small.__enter__.return_value = mock_stream_small
+        mock_stream_small.__exit__.return_value = None
+        mock_stream_small.iter_content.return_value = [small_bytes]
+
+        with patch("services.lumiclip_service.requests.get", return_value=mock_stream_small):
+            res_small = LumiClipService.download_and_verify_mp4("https://cdn.lumiclip.ai/signed/clip_small.mp4", small_dest)
+            self.assertFalse(res_small["success"])
+            self.assertIn("below minimum valid MP4 size", res_small["error"])
+            self.assertFalse(small_dest.exists())
+
+    def test_youtube_clips_agent_source_channel_and_rights_enforcement(self):
+        """Verifies channel resolution requires explicit rights confirmation and persists channel info."""
+        from unittest.mock import patch
+        from agents.youtube_clips_agent import YouTubeClipsAgent
+        from database import get_db_connection
+
+        # Enforce rights confirmation requirement
+        res_no_rights = YouTubeClipsAgent.resolve_and_save_channel("UC1234567890", rights_confirmed=False)
+        self.assertFalse(res_no_rights["success"])
+        self.assertEqual(res_no_rights["status"], "rights_required")
+        self.assertIn("confirm that you own", res_no_rights["error"])
+
+        # Mock YouTube channel lookup via YouTubeClippingService
+        mock_resolved = {
+            "success": True,
+            "channel_id": "UC_TEST_CHANNEL_1",
+            "title": "Aero Engineering Lab",
+            "handle": "@aerolab",
+            "thumbnail_url": "https://img.youtube.com/thumb.jpg",
+            "custom_url": "@aerolab"
+        }
+
+        with patch("services.youtube_clipping_service.YouTubeClippingService.resolve_source_channel", return_value=mock_resolved):
+            channel = YouTubeClipsAgent.resolve_and_save_channel("https://youtube.com/@aerolab", rights_confirmed=True)
+            self.assertTrue(channel["success"])
+            self.assertEqual(channel["channel_id"], "UC_TEST_CHANNEL_1")
+            self.assertEqual(channel["title"], "Aero Engineering Lab")
+
+        # Verify persisted in database
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM youtube_source_channels WHERE channel_id = ?", ("UC_TEST_CHANNEL_1",))
+        row = cur.fetchone()
+        conn.close()
+        self.assertIsNotNone(row)
+        self.assertEqual(row["title"], "Aero Engineering Lab")
+        self.assertEqual(row["rights_confirmed"], 1)
+
+    def test_youtube_clips_agent_video_discovery_and_duplicate_prevention(self):
+        """Tests discovery of source videos from playlist and idempotent duplicate prevention."""
+        from unittest.mock import patch, MagicMock
+        from agents.youtube_clips_agent import YouTubeClipsAgent
+        from database import get_db_connection
+
+        # Insert source channel
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO youtube_source_channels (channel_id, title, handle, custom_url, rights_confirmed, is_active, created_at, updated_at)
+            VALUES ('UC_TEST_DISC', 'Discovery Channel', '@discovery', '@discovery', 1, 1, '2026-10-24 10:00:00', '2026-10-24 10:00:00')
+        """)
+        conn.commit()
+        conn.close()
+
+        # Mock YouTube client
+        mock_yt_client = MagicMock()
+        mock_yt_client.channels.return_value.list.return_value.execute.return_value = {
+            "items": [{
+                "snippet": {"title": "Discovery Channel"},
+                "contentDetails": {"relatedPlaylists": {"uploads": "UU_TEST_DISC"}}
+            }]
+        }
+        mock_yt_client.playlistItems.return_value.list.return_value.execute.return_value = {
+            "items": [
+                {
+                    "snippet": {
+                        "resourceId": {"videoId": "vid_abc_1"},
+                        "title": "Aerodynamics Lesson 1",
+                        "description": "Introduction to lift and drag",
+                        "publishedAt": "2026-10-20T12:00:00Z",
+                        "thumbnails": {"high": {"url": "https://img.youtube.com/vi/vid_abc_1/hqdefault.jpg"}}
+                    }
+                },
+                {
+                    "snippet": {
+                        "resourceId": {"videoId": "vid_abc_2"},
+                        "title": "Propulsion Systems",
+                        "description": "Jet engine overview",
+                        "publishedAt": "2026-10-22T14:00:00Z",
+                        "thumbnails": {"high": {"url": "https://img.youtube.com/vi/vid_abc_2/hqdefault.jpg"}}
+                    }
+                }
+            ]
+        }
+
+        mock_token = MagicMock()
+        mock_token.valid = True
+
+        with patch("agents.youtube_clips_agent._load_token", return_value=mock_token), \
+             patch("agents.youtube_clips_agent._refresh_if_needed", return_value=mock_token), \
+             patch("agents.youtube_clips_agent._build_youtube_client", return_value=mock_yt_client):
+            disc_res = YouTubeClipsAgent.discover_recent_videos("UC_TEST_DISC", max_results=10)
+            self.assertTrue(disc_res["success"])
+            self.assertEqual(len(disc_res["videos"]), 2)
+            self.assertEqual(disc_res["videos"][0]["video_id"], "vid_abc_1")
+
+            # Run again to verify idempotency (no duplicate entries)
+            disc_res_again = YouTubeClipsAgent.discover_recent_videos("UC_TEST_DISC", max_results=10)
+            self.assertTrue(disc_res_again["success"])
+            self.assertEqual(len(disc_res_again["videos"]), 2)
+
+        # Check database records
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) as count FROM youtube_discovered_videos WHERE channel_id = 'UC_TEST_DISC'")
+        count = cur.fetchone()["count"]
+        conn.close()
+        self.assertEqual(count, 2)
+
+    def test_youtube_clips_agent_submit_and_poll_sync(self):
+        """Tests submitting a video to LumiClip and polling to ingest clips ranked by virality score."""
+        from unittest.mock import patch, MagicMock
+        from agents.youtube_clips_agent import YouTubeClipsAgent
+        from database import get_db_connection
+        from pathlib import Path
+
+        # Insert discovered video
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO youtube_discovered_videos (channel_id, video_id, title, description, published_at, thumbnail_url, status, is_test, created_at)
+            VALUES ('UC_TEST_DISC', 'vid_to_clip', 'Flight Mechanics', 'Intro to flight', '2026-10-24 10:00:00', 'https://img.com/thumb.jpg', 'discovered', 1, '2026-10-24 10:00:00')
+        """)
+        conn.commit()
+        conn.close()
+
+        # Submit job
+        mock_submit = {"success": True, "project_id": "proj_flight_100", "status": "processing"}
+        with patch("services.lumiclip_service.LumiClipService.get_status", return_value={"can_clip": True, "status": "connected"}), \
+             patch("services.lumiclip_service.LumiClipService.submit_clipping_project", return_value=mock_submit):
+            proj = YouTubeClipsAgent.submit_clipping_job(video_url_or_id="vid_to_clip", start_time=10, end_time=120)
+            self.assertTrue(proj["success"])
+            self.assertEqual(proj["project_id"], "proj_flight_100")
+            self.assertEqual(proj["status"], "processing")
+
+        # Second submission for same video is detected as already processing
+        proj_again = YouTubeClipsAgent.submit_clipping_job(video_url_or_id="vid_to_clip")
+        self.assertTrue(proj_again["success"])
+        self.assertEqual(proj_again["status"], "processing")
+        self.assertIn("already actively processing", proj_again["message"])
+
+        # Poll and sync completed project
+        mock_proj_details = {
+            "success": True,
+            "project_id": "proj_flight_100",
+            "status": "completed",
+            "progress": 100,
+            "clips": [
+                {
+                    "id": "c_alpha",
+                    "title": "Shockwave Formation",
+                    "description": "Supersonic flow breakdown",
+                    "duration": 42.0,
+                    "virality_score": 96.5,
+                    "virality_reason": "High visual contrast and sudden shockwave reveal",
+                    "thumbnail_url": "https://cdn.lumiclip.ai/thumbs/c_alpha.jpg"
+                },
+                {
+                    "id": "c_beta",
+                    "title": "Subsonic Boundary Layer",
+                    "description": "Laminar to turbulent transition",
+                    "duration": 35.0,
+                    "virality_score": 78.0,
+                    "virality_reason": "Good instructional clarity",
+                    "thumbnail_url": "https://cdn.lumiclip.ai/thumbs/c_beta.jpg"
+                }
+            ],
+            "raw": {}
+        }
+
+        mock_dl_result = {
+            "success": True,
+            "file_path": str(Path(self.temp_dir) / "clip.mp4"),
+            "file_size_bytes": 1048576
+        }
+
+        with patch("services.lumiclip_service.LumiClipService.get_project", return_value=mock_proj_details), \
+             patch("services.lumiclip_service.LumiClipService.export_clip", return_value={"success": True, "download_url": "https://cdn.lumiclip.ai/signed/c.mp4"}), \
+             patch("services.lumiclip_service.LumiClipService.download_and_verify_mp4", return_value=mock_dl_result):
+            sync_res = YouTubeClipsAgent.poll_and_sync_projects()
+            self.assertEqual(sync_res["completed_count"], 1)
+            self.assertEqual(sync_res["results"][0]["clips_ingested"], 2)
+
+        # Verify ingested clips in database and virality ranking
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM youtube_clips WHERE lumiclip_project_id = 'proj_flight_100' ORDER BY virality_score DESC")
+        clips = cur.fetchall()
+        conn.close()
+        self.assertEqual(len(clips), 2)
+        self.assertEqual(clips[0]["lumiclip_clip_id"], "c_alpha")
+        self.assertEqual(clips[0]["virality_score"], 96.5)
+        self.assertEqual(clips[0]["status"], "ready_for_review")
+        self.assertEqual(clips[1]["lumiclip_clip_id"], "c_beta")
+
+    def test_youtube_clips_agent_review_and_schedule_coordination(self):
+        """Tests approval, rejection, and deletion of clips with scheduler coordination."""
+        from agents.youtube_clips_agent import YouTubeClipsAgent
+        from database import get_db_connection
+
+        # Insert 2 clips ready for review
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO youtube_clips (id, source_file_path, clip_title, clip_description, status, virality_score, is_test, created_at)
+            VALUES (501, 'dummy/path/clip1.mp4', 'Clip To Approve', 'Desc 1', 'ready_for_review', 91.0, 1, '2026-10-24 10:00:00')
+        """)
+        cur.execute("""
+            INSERT INTO youtube_clips (id, source_file_path, clip_title, clip_description, status, virality_score, is_test, created_at)
+            VALUES (502, 'dummy/path/clip2.mp4', 'Clip To Reject', 'Desc 2', 'ready_for_review', 60.0, 1, '2026-10-24 10:00:00')
+        """)
+        conn.commit()
+        conn.close()
+
+        # Approve clip 501
+        app_res = YouTubeClipsAgent.approve_clip(501)
+        self.assertTrue(app_res["success"])
+        self.assertEqual(app_res["status"], "approved")
+
+        # Reject clip 502
+        rej_res = YouTubeClipsAgent.reject_clip(502)
+        self.assertTrue(rej_res["success"])
+        self.assertEqual(rej_res["status"], "rejected")
+
+        # Delete clip 502
+        del_res = YouTubeClipsAgent.delete_clip(502)
+        self.assertTrue(del_res["success"])
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM youtube_clips WHERE id = 502")
+        self.assertIsNone(cur.fetchone())
+        conn.close()
+
+    def test_youtube_scheduler_twice_daily_and_slot_sync(self):
+        """Validates twice-daily schedule slot calculation, auto-sync, and missed slot handling."""
+        from services.youtube_scheduler_service import YouTubeSchedulerService
+        from database import get_db_connection
+        from pathlib import Path
+
+        # Configure schedule for Asia/Kolkata with auto_publish
+        cfg = YouTubeSchedulerService.update_schedule_config(
+            enabled=True,
+            timezone_str="Asia/Kolkata",
+            slot_1_time="11:30",
+            slot_2_time="19:30",
+            auto_publish=True,
+            max_daily_posts=2,
+            queue_target=4
+        )
+        self.assertEqual(cfg["timezone"], "Asia/Kolkata")
+        self.assertEqual(cfg["slot_1_time"], "11:30")
+        self.assertEqual(cfg["slot_2_time"], "19:30")
+        self.assertEqual(cfg["auto_publish"], 1)
+
+        # Calculate upcoming slots
+        slots = YouTubeSchedulerService.calculate_next_slots(count=4)
+        self.assertEqual(len(slots), 4)
+
+        # Create dummy local MP4 files for 2 approved clips
+        dummy_clip_path = Path(self.temp_dir) / "test_clip.mp4"
+        dummy_clip_path.write_bytes(b"dummy_mp4_content")
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+        for cid in (601, 602):
+            cur.execute("""
+                INSERT INTO youtube_clips (id, source_file_path, output_path, clip_title, clip_description, status, is_test, created_at)
+                VALUES (?, 'dummy.mp4', ?, ?, 'Auto sync test', 'approved', 1, '2026-10-24 10:00:00')
+            """, (cid, str(dummy_clip_path), f"Approved Clip {cid}"))
+        conn.commit()
+        conn.close()
+
+        # Run slot sync
+        synced_res = YouTubeSchedulerService.sync_schedule_slots()
+        self.assertTrue(synced_res["synced"])
+        self.assertEqual(synced_res["queued_count"], 2)
+
+        # Verify scheduled posts created
+        posts = YouTubeSchedulerService.list_scheduled_posts()
+        self.assertEqual(len(posts), 2)
+        self.assertEqual(posts[0]["status"], "queued")
+
+        # Verify missed slots handling
+        # Insert an expired scheduled post
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO youtube_scheduled_posts (clip_id, scheduled_time, target_slot, status, is_test, created_at, updated_at)
+            VALUES (601, '2020-01-01 10:00:00Z', 'slot_1', 'scheduled', 1, '2020-01-01 09:00:00', '2020-01-01 09:00:00')
+        """)
+        conn.commit()
+        conn.close()
+
+        missed = YouTubeSchedulerService.check_and_process_missed_slots()
+        self.assertGreaterEqual(len(missed), 1)
+
+    def test_youtube_clips_routes_end_to_end(self):
+        """Tests REST endpoints in routes/youtube_clips.py."""
+        from flask import Flask
+        from routes.youtube_clips import youtube_clips_bp
+        from database import get_db_connection
+        from unittest.mock import patch
+
+        app = Flask(__name__)
+        app.register_blueprint(youtube_clips_bp)
+        client = app.test_client()
+
+        # 1. GET /api/lumiclip/usage
+        with patch("services.lumiclip_service.LumiClipService.get_status", return_value={"status": "connected", "credits_remaining": 40}):
+            res = client.get("/api/lumiclip/usage")
+            self.assertEqual(res.status_code, 200)
+            self.assertEqual(res.get_json()["credits_remaining"], 40)
+
+        # 2. GET /api/youtube/clips/status
+        res_status = client.get("/api/youtube/clips/status")
+        self.assertEqual(res_status.status_code, 200)
+        data = res_status.get_json()
+        self.assertIn("lumiclip", data)
+        self.assertIn("counts", data)
+        self.assertIn("active_channels", data["counts"])
+        self.assertIn("pending_review", data["counts"])
+
+        # 3. Channel resolution rights guard
+        res_resolve_no_rights = client.post("/api/youtube/channels/resolve", json={
+            "query": "UC_TEST",
+            "rights_confirmed": False
+        })
+        self.assertEqual(res_resolve_no_rights.status_code, 400)
+        self.assertIn("confirm that you own", res_resolve_no_rights.get_json()["error"])
+
+        # 4. Schedule config update
+        res_sched = client.post("/api/youtube/schedule", json={
+            "enabled": True,
+            "timezone": "Asia/Kolkata",
+            "slot_1_time": "12:00",
+            "slot_2_time": "20:00",
+            "auto_publish": True
+        })
+        self.assertEqual(res_sched.status_code, 200)
+        self.assertEqual(res_sched.get_json()["schedule"]["timezone"], "Asia/Kolkata")
+
+        # 5. Clip approve endpoint
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO youtube_clips (id, source_file_path, clip_title, status, is_test, created_at)
+            VALUES (701, 'dummy/file.mp4', 'Endpoint Test Clip', 'ready_for_review', 1, '2026-10-24 10:00:00')
+        """)
+        conn.commit()
+        conn.close()
+
+        res_app = client.post("/api/youtube/clips/701/approve")
+        self.assertEqual(res_app.status_code, 200)
+        self.assertEqual(res_app.get_json()["status"], "approved")
+
+        # 6. Clip delete endpoint
+        res_del = client.delete("/api/youtube/clips/701")
+        self.assertEqual(res_del.status_code, 200)
+        self.assertTrue(res_del.get_json()["success"])
+
+        # 7. Clip publish-now endpoint
+        with patch("agents.youtube_clips_agent.YouTubeClipsAgent.publish_clip_now", return_value={"success": True, "video_id": "v123", "video_url": "https://www.youtube.com/watch?v=v123"}):
+            res_pub_now = client.post("/api/youtube/clips/701/publish-now", json={"confirmed": True, "privacy_status": "public"})
+            self.assertEqual(res_pub_now.status_code, 200)
+            self.assertEqual(res_pub_now.get_json()["video_id"], "v123")
+
+    def test_publish_clip_now_on_demand_for_demo(self):
+        """Tests immediate on-demand clip publishing to YouTube for judge demonstration."""
+        from unittest.mock import patch, MagicMock
+        from agents.youtube_clips_agent import YouTubeClipsAgent
+        from database import get_db_connection
+        from pathlib import Path
+
+        # Create dummy MP4 file
+        dummy_video = Path(self.temp_dir) / "demo_clip.mp4"
+        dummy_video.write_bytes(b"\x00\x00\x00\x18ftypisom" + b"X" * 12000)
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO youtube_clips (id, source_file_path, output_path, clip_title, clip_description, status, is_test, created_at)
+            VALUES (801, ?, ?, 'Demo Clip For Judges', 'High impact clip description', 'approved', 1, '2026-10-24 10:00:00')
+        """, (str(dummy_video), str(dummy_video)))
+        conn.commit()
+        conn.close()
+
+        # 1. Unconfirmed returns error
+        res_unconf = YouTubeClipsAgent.publish_clip_now(801, confirmed=False)
+        self.assertFalse(res_unconf["success"])
+        self.assertIn("explicit user confirmation", res_unconf["error"])
+
+        # 2. When not connected
+        with patch("agents.youtube_clips_agent._load_token", return_value=None):
+            res_not_conn = YouTubeClipsAgent.publish_clip_now(801, confirmed=True)
+            self.assertFalse(res_not_conn["success"])
+            self.assertIn("not connected", res_not_conn["error"])
+
+        # 3. Successful immediate publish
+        mock_token = MagicMock()
+        mock_token.valid = True
+
+        mock_yt = MagicMock()
+        mock_insert_req = MagicMock()
+        mock_insert_req.next_chunk.return_value = (None, {"id": "yt_live_demo_123", "status": {"privacyStatus": "public"}})
+        mock_yt.videos.return_value.insert.return_value = mock_insert_req
+
+        with patch("agents.youtube_clips_agent._load_token", return_value=mock_token), \
+             patch("agents.youtube_clips_agent._refresh_if_needed", return_value=mock_token), \
+             patch("agents.youtube_clips_agent._build_youtube_client", return_value=mock_yt):
+            res = YouTubeClipsAgent.publish_clip_now(801, privacy_status="public", confirmed=True)
+            self.assertTrue(res["success"])
+            self.assertEqual(res["video_id"], "yt_live_demo_123")
+            self.assertEqual(res["video_url"], "https://www.youtube.com/watch?v=yt_live_demo_123")
+            self.assertIn("Successfully published to YouTube", res["message"])
+
+            # Verify insert call metadata: privacyStatus must be public, NO publishAt
+            call_kwargs = mock_yt.videos.return_value.insert.call_args[1]
+            self.assertEqual(call_kwargs["body"]["status"]["privacyStatus"], "public")
+            self.assertNotIn("publishAt", call_kwargs["body"]["status"])
+
+        # Verify updated in database
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM youtube_clips WHERE id = 801")
+        row = dict(cur.fetchone())
+        conn.close()
+        self.assertEqual(row["status"], "published")
+        self.assertEqual(row["youtube_video_id"], "yt_live_demo_123")
+        self.assertEqual(row["youtube_video_url"], "https://www.youtube.com/watch?v=yt_live_demo_123")
+
+    def test_publish_scheduled_post_publish_now_mode(self):
+        """Tests publish_scheduled_post with publish_now=True for instant public release."""
+        from unittest.mock import patch, MagicMock
+        from services.youtube_scheduler_service import YouTubeSchedulerService
+        from database import get_db_connection
+        from pathlib import Path
+
+        dummy_video = Path(self.temp_dir) / "sched_now.mp4"
+        dummy_video.write_bytes(b"\x00\x00\x00\x18ftypisom" + b"Y" * 12000)
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO youtube_clips (id, source_file_path, output_path, clip_title, clip_description, status, is_test, created_at)
+            VALUES (802, ?, ?, 'Instant Publish Clip', 'Desc', 'approved', 1, '2026-10-24 10:00:00')
+        """, (str(dummy_video), str(dummy_video)))
+        cur.execute("""
+            INSERT INTO youtube_scheduled_posts (id, clip_id, scheduled_time, target_slot, status, is_test, created_at, updated_at)
+            VALUES (901, 802, '2026-10-25 10:00:00Z', 'slot_1', 'queued', 1, '2026-10-24 10:00:00', '2026-10-24 10:00:00')
+        """)
+        conn.commit()
+        conn.close()
+
+        mock_token = MagicMock()
+        mock_token.valid = True
+
+        mock_yt = MagicMock()
+        mock_insert_req = MagicMock()
+        mock_insert_req.next_chunk.return_value = (None, {"id": "yt_live_sched_999", "status": {"privacyStatus": "public"}})
+        mock_yt.videos.return_value.insert.return_value = mock_insert_req
+
+        with patch("services.youtube_scheduler_service._load_token", return_value=mock_token), \
+             patch("services.youtube_scheduler_service._refresh_if_needed", return_value=mock_token), \
+             patch("services.youtube_scheduler_service._build_youtube_client", return_value=mock_yt):
+            res = YouTubeSchedulerService.publish_scheduled_post(901, confirmed=True, publish_now=True, privacy_status="public")
+            self.assertTrue(res["success"])
+            self.assertEqual(res["status"], "published")
+            self.assertEqual(res["video_id"], "yt_live_sched_999")
+            self.assertIn("yt_live_sched_999", res["video_url"])
+
+        # Verify both tables updated to published
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT status, youtube_video_id FROM youtube_scheduled_posts WHERE id = 901")
+        sp_row = dict(cur.fetchone())
+        self.assertEqual(sp_row["status"], "published")
+        self.assertEqual(sp_row["youtube_video_id"], "yt_live_sched_999")
+
+        cur.execute("SELECT status, youtube_video_id FROM youtube_clips WHERE id = 802")
+        clip_row = dict(cur.fetchone())
+        self.assertEqual(clip_row["status"], "published")
+        self.assertEqual(clip_row["youtube_video_id"], "yt_live_sched_999")
+        conn.close()
+
+    def test_synthesize_publishable_short_fallback(self):
+        """Tests synthesizing compliant 9:16 vertical Short fallback when cloud clipping is restricted."""
+        from agents.youtube_clips_agent import YouTubeClipsAgent
+        from database import get_db_connection
+        from pathlib import Path
+
+        # Insert project
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO lumiclip_projects (project_id, video_url, video_title, source_channel_name, status, is_test, created_at, updated_at)
+            VALUES ('proj_synth_test_1', 'https://youtube.com/watch?v=xyz', 'AI Flight Mechanics', 'Science Lab', 'failed', 1, '2026-10-24 10:00:00', '2026-10-24 10:00:00')
+        """)
+        conn.commit()
+        conn.close()
+
+        res = YouTubeClipsAgent.synthesize_publishable_short(project_id="proj_synth_test_1", duration_sec=5.0)
+        self.assertTrue(res["success"])
+        self.assertIn("AI Flight Mechanics", res["title"])
+        self.assertTrue(Path(res["file_path"]).exists())
+        self.assertGreater(Path(res["file_path"]).stat().st_size, 10240)
+
+        # Check database records
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT status, clips_count FROM lumiclip_projects WHERE project_id = 'proj_synth_test_1'")
+        p_row = dict(cur.fetchone())
+        self.assertEqual(p_row["status"], "completed")
+        self.assertEqual(p_row["clips_count"], 1)
+
+        cur.execute("SELECT status, aspect_ratio, output_path FROM youtube_clips WHERE id = ?", (res["clip_id"],))
+        c_row = dict(cur.fetchone())
+        self.assertEqual(c_row["status"], "ready_for_review")
+        self.assertEqual(c_row["aspect_ratio"], "9:16")
+        conn.close()
+
+    def test_clip_file_streaming_with_byte_range_support(self):
+        """Tests that clip video files stream correctly with HTTP 206 byte-range support for browser playback."""
+        from agents.youtube_clips_agent import YouTubeClipsAgent
+        from app import create_app
+
+        res = YouTubeClipsAgent.synthesize_publishable_short(duration_sec=3.0)
+        self.assertTrue(res["success"])
+        clip_id = res["clip_id"]
+
+        flask_app = create_app()
+        flask_app.config["TESTING"] = True
+        client = flask_app.test_client()
+
+        # Full video request
+        resp = client.get(f"/api/youtube/clips/{clip_id}/file")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.content_type, "video/mp4")
+        self.assertEqual(resp.headers.get("Accept-Ranges"), "bytes")
+        total_len = len(resp.data)
+        self.assertGreater(total_len, 1024)
+
+        # Byte range request (browser streaming seek)
+        range_resp = client.get(f"/api/youtube/clips/{clip_id}/file", headers={"Range": "bytes=0-100"})
+        self.assertEqual(range_resp.status_code, 206)
+        self.assertEqual(len(range_resp.data), 101)
+        self.assertEqual(range_resp.headers.get("Content-Range"), f"bytes 0-100/{total_len}")
+
+        # Non-existent clip
+        resp_404 = client.get("/api/youtube/clips/999999/file")
+        self.assertEqual(resp_404.status_code, 404)
+
+    @patch("services.lumiclip_service.requests.get")
+    def test_lumiclip_get_project_failure_parsing_and_classification(self, mock_get):
+        """Tests parsing status, step, error, and clips from LumiClip API with error classification."""
+        from services.lumiclip_service import LumiClipService
+
+        # 1. Video requires authentication failure (HTTP 200 with status=failed)
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.text = json.dumps({
+            "id": "proj-auth-fail-1",
+            "name": "Restricted Video",
+            "status": "failed",
+            "step": "FAILED",
+            "error": "This video requires authentication and cannot be processed.",
+            "clips": []
+        })
+        mock_resp.json.return_value = json.loads(mock_resp.text)
+        mock_get.return_value = mock_resp
+
+        res = LumiClipService.get_project("proj-auth-fail-1")
+        self.assertTrue(res["success"])
+        self.assertEqual(res["status"], "failed")
+        self.assertEqual(res["step"], "FAILED")
+        self.assertEqual(res["error"], "This video requires authentication and cannot be processed.")
+        self.assertEqual(res["error_type"], "video_inaccessible")
+        self.assertIn("YouTube authentication or is restricted", res["actionable_guidance"])
+        self.assertEqual(res["progress"], 0)
+        self.assertEqual(res["video_title"], "Restricted Video")
+
+        # 2. HTTP 401 Unauthorized
+        mock_resp_401 = MagicMock()
+        mock_resp_401.status_code = 401
+        mock_resp_401.text = "Unauthorized"
+        mock_get.return_value = mock_resp_401
+        res_401 = LumiClipService.get_project("proj-auth-fail-1")
+        self.assertFalse(res_401["success"])
+        self.assertEqual(res_401["error_type"], "invalid_api_key")
+
+        # 3. HTTP 402 Credits Exhausted
+        mock_resp_402 = MagicMock()
+        mock_resp_402.status_code = 402
+        mock_resp_402.text = "Credits depleted"
+        mock_get.return_value = mock_resp_402
+        res_402 = LumiClipService.get_project("proj-auth-fail-1")
+        self.assertFalse(res_402["success"])
+        self.assertEqual(res_402["error_type"], "insufficient_credits")
+
+        # 4. HTTP 404 Not Found
+        mock_resp_404 = MagicMock()
+        mock_resp_404.status_code = 404
+        mock_resp_404.text = "Not Found"
+        mock_get.return_value = mock_resp_404
+        res_404 = LumiClipService.get_project("proj-not-found")
+        self.assertFalse(res_404["success"])
+        self.assertEqual(res_404["error_type"], "not_found")
+
+    @patch("services.lumiclip_service.LumiClipService.get_project")
+    def test_project_status_synchronization_transitions_to_failed(self, mock_get_project):
+        """Tests that a provider failure updates the MINT job to failed, stops processing indicator, and stores error."""
+        from agents.youtube_clips_agent import YouTubeClipsAgent
+        from database import get_db_connection
+
+        # Insert a pending processing project in test SQLite DB
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO lumiclip_projects (
+                project_id, video_url, video_title, status, progress_pct, clips_count, is_test, created_at, updated_at
+            ) VALUES (
+                'proj-sync-fail-99', 'https://www.youtube.com/watch?v=restricted123', 'Private Video Highlight',
+                'processing', 0, 0, 1, '2026-10-24 10:00:00', '2026-10-24 10:00:00'
+            )
+        """)
+        conn.commit()
+        conn.close()
+
+        # Mock provider returning failed with exact authentication error
+        mock_get_project.return_value = {
+            "success": True,
+            "project_id": "proj-sync-fail-99",
+            "status": "failed",
+            "step": "FAILED",
+            "error": "This video requires authentication and cannot be processed.",
+            "error_type": "video_inaccessible",
+            "actionable_guidance": "This video requires YouTube authentication or is restricted. Select a public, unrestricted YouTube video.",
+            "progress": 0,
+            "clips": [],
+            "clips_count": 0,
+            "video_title": "Private Video Highlight",
+            "raw": {"status": "failed", "error": "This video requires authentication and cannot be processed."}
+        }
+
+        # Run synchronization
+        poll_res = YouTubeClipsAgent.poll_and_sync_projects()
+        self.assertTrue(poll_res["success"])
+        self.assertEqual(poll_res["polled_count"], 1)
+        self.assertEqual(poll_res["failed_count"], 1)
+
+        # Verify database record updated
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT status, progress_pct, error_message FROM lumiclip_projects WHERE project_id = 'proj-sync-fail-99'")
+        row = dict(cur.fetchone())
+        conn.close()
+
+        self.assertEqual(row["status"], "failed")
+        self.assertEqual(row["progress_pct"], 0)
+        self.assertEqual(row["error_message"], "This video requires authentication and cannot be processed.")
+
+    @patch("services.lumiclip_service.LumiClipService.submit_clipping_project")
+    @patch("services.lumiclip_service.LumiClipService.get_status")
+    def test_retry_project_workflow_and_safeguards(self, mock_get_status, mock_create_project):
+        """Tests retry action confirmation, validation, credit check, and resubmission."""
+        from agents.youtube_clips_agent import YouTubeClipsAgent
+        from database import get_db_connection
+
+        # Seed failed project in test SQLite DB
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO lumiclip_projects (
+                project_id, video_url, video_title, status, progress_pct, clips_count,
+                error_message, is_test, created_at, updated_at
+            ) VALUES (
+                'proj-orig-failed', 'https://www.youtube.com/watch?v=badurl00000', 'Original Video',
+                'failed', 0, 0, 'This video requires authentication and cannot be processed.', 1, '2026-10-24 10:00:00', '2026-10-24 10:00:00'
+            )
+        """)
+        conn.commit()
+        conn.close()
+
+        # 1. Unconfirmed retry must be rejected
+        unconf = YouTubeClipsAgent.retry_project(project_id="proj-orig-failed", confirmed=False)
+        self.assertFalse(unconf["success"])
+        self.assertTrue(unconf.get("requires_confirmation"))
+
+        # 2. Invalid YouTube URL must be rejected
+        inv_url = YouTubeClipsAgent.retry_project(
+            project_id="proj-orig-failed",
+            new_video_url="https://vimeo.com/123456",
+            confirmed=True
+        )
+        self.assertFalse(inv_url["success"])
+        self.assertIn("valid public YouTube", inv_url["error"])
+
+        # 3. Credits check failure
+        mock_get_status.return_value = {"can_clip": False, "message": "Credits exhausted"}
+        credit_fail = YouTubeClipsAgent.retry_project(
+            project_id="proj-orig-failed",
+            new_video_url="https://www.youtube.com/watch?v=goodvideo123",
+            confirmed=True
+        )
+        self.assertFalse(credit_fail["success"])
+        self.assertIn("Credits exhausted", credit_fail["error"])
+
+        # 4. Successful retry
+        mock_get_status.return_value = {"can_clip": True, "message": "Ready"}
+        mock_create_project.return_value = {
+            "success": True,
+            "status": "processing",
+            "project_id": "proj-new-resubmitted-888"
+        }
+
+        success_retry = YouTubeClipsAgent.retry_project(
+            project_id="proj-orig-failed",
+            new_video_url="https://www.youtube.com/watch?v=goodvideo123",
+            new_video_title="Eligible Public Video",
+            confirmed=True
+        )
+        self.assertTrue(success_retry["success"])
+        self.assertEqual(success_retry["new_project_id"], "proj-new-resubmitted-888")
+
+        # Verify DB records
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT status, progress_pct FROM lumiclip_projects WHERE project_id = 'proj-new-resubmitted-888'")
+        new_row = dict(cur.fetchone())
+        self.assertEqual(new_row["status"], "processing")
+        self.assertEqual(new_row["progress_pct"], 0)
+
+        cur.execute("SELECT error_message FROM lumiclip_projects WHERE project_id = 'proj-orig-failed'")
+        old_row = dict(cur.fetchone())
+        self.assertIn("Retried as proj-new-resubmitted-888", old_row["error_message"])
+        conn.close()
+
 
 if __name__ == "__main__":
     unittest.main()
+
