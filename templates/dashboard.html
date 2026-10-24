@@ -16,11 +16,12 @@
 <body>
   <nav class="global-nav">
     <div class="nav-links">
-      <a href="/" class="nav-link active">Dashboard</a>
+      <a href="/" class="nav-link active">Overview</a>
+      <a href="/youtube-clips" class="nav-link">YouTube Clips</a>
       <a href="/studio" class="nav-link">Content Studio</a>
       <a href="/products" class="nav-link">Digital Products</a>
       <a href="/affiliates" class="nav-link">Affiliate Hub</a>
-      <a href="/portfolio" class="nav-link">Venture Portfolio</a>
+      <a href="/portfolio" class="nav-link">Portfolio</a>
       <a href="/storefront" class="nav-link" target="_blank">Storefront ↗</a>
     </div>
     <div style="display: flex; gap: 12px; align-items: center;">
@@ -451,6 +452,23 @@
 
             <div class="integration-actions">
               <button class="neo-btn" id="btn-ig-check" onclick="checkInstagram()" style="font-size:11.5px;">Check Connection</button>
+            </div>
+          </div>
+
+          <!-- LumiClip AI Video Clipping Panel -->
+          <div class="integration-panel">
+            <div class="integration-header">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span class="platform-icon" style="background:#e0e7ff; color:#4f46e5; border-radius:4px; padding:2px 6px; font-size:13px;">✂️</span>
+                <strong>LumiClip AI Clipping Engine</strong>
+              </div>
+              <span class="status-pill" id="pill-lumiclip">Checking...</span>
+            </div>
+            <p class="integration-status-text" id="desc-lumiclip">Checking LumiClip API credentials &amp; credit balance.</p>
+            <div id="lumiclip-info" class="ig-info-card" style="display:none; margin-top:8px; font-size:12px; line-height:1.5;"></div>
+            <div class="integration-actions" style="margin-top:10px;">
+              <a href="/youtube-clips" class="neo-btn neo-btn-primary" style="font-size:11.5px; text-decoration:none;">Open Clips Agent</a>
+              <button class="neo-btn" onclick="checkLumiClip()" style="font-size:11.5px;">Refresh Usage</button>
             </div>
           </div>
         </div>

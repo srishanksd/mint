@@ -171,11 +171,12 @@
 <body>
   <nav class="global-nav">
     <div class="nav-links">
-      <a href="/" class="nav-link">Dashboard</a>
+      <a href="/" class="nav-link">Overview</a>
+      <a href="/youtube-clips" class="nav-link">YouTube Clips</a>
       <a href="/studio" class="nav-link active">Content Studio</a>
       <a href="/products" class="nav-link">Digital Products</a>
       <a href="/affiliates" class="nav-link">Affiliate Hub</a>
-      <a href="/portfolio" class="nav-link">Venture Portfolio</a>
+      <a href="/portfolio" class="nav-link">Portfolio</a>
       <a href="/storefront" class="nav-link" target="_blank">Storefront ↗</a>
     </div>
     <div style="display: flex; gap: 12px; align-items: center;">
@@ -469,11 +470,14 @@
                   <div style="font-size:11px; color:var(--text-muted); margin-bottom:8px;">
                     {{ img.aspect_ratio }} &middot; {{ img.model }} &middot; {{ img.created_at[:10] }}
                   </div>
-                  <div style="display:flex; gap:8px; margin-top:auto;">
-                    {% if img.file_url %}
-                      <a href="{{ img.file_url }}" download="mint_image_{{ img.id }}.jpg" class="neo-btn" style="flex:1; text-align:center; text-decoration:none; font-size:11.5px; padding:6px;">Download</a>
-                    {% endif %}
-                    <button onclick="deleteImage({{ img.id }})" class="neo-btn" style="color:#ef4444; border-color:rgba(239,68,68,0.3); font-size:11.5px; padding:6px;">Delete</button>
+                  <div style="display:flex; flex-direction:column; gap:6px; margin-top:auto;">
+                    <div style="display:flex; gap:6px;">
+                      {% if img.file_url %}
+                        <a href="{{ img.file_url }}" download="mint_image_{{ img.id }}.jpg" class="neo-btn" style="flex:1; text-align:center; text-decoration:none; font-size:11px; padding:6px;">Download</a>
+                        <button type="button" onclick="openPublishStandaloneImageModal({{ img.id }}, '{{ (img.prompt or '')|replace('\\', '\\\\')|replace('\"', '&quot;')|replace('\'', '\\\'')|truncate(80) }}', '{{ img.file_url }}')" class="neo-btn neo-btn-primary" style="flex:1.4; font-size:11px; padding:6px; background:var(--accent-primary); color:#fff; font-weight:600;">Publish to IG</button>
+                      {% endif %}
+                      <button type="button" onclick="deleteImage({{ img.id }})" class="neo-btn" style="color:#ef4444; border-color:rgba(239,68,68,0.3); font-size:11px; padding:6px;">Delete</button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -782,6 +786,49 @@
     </div>
   </div>
 
+  <!-- Standalone Image Instagram Publish Modal -->
+  <div id="publishImageModal" class="modal-backdrop" style="display:none;">
+    <div class="modal-box" style="max-width:520px;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
+        <div style="width:36px; height:36px; border-radius:50%; background:#e0e7ff; color:#4f46e5; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:700;">📸</div>
+        <div>
+          <h3 style="margin:0; font-size:16px; color:var(--text-primary);">Publish Image to Instagram</h3>
+          <span style="font-size:11.5px; color:var(--text-muted);">Asset <span id="pubImgAssetId">#</span> &middot; Cloudflare FLUX.1 Schnell</span>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:14px; margin-bottom:14px; background:var(--surface-nested); border:1px solid var(--border-subtle); border-radius:8px; padding:10px; align-items:center;">
+        <img id="pubImgThumbnail" src="" alt="Thumbnail" style="width:72px; height:72px; object-fit:cover; border-radius:6px; border:1px solid var(--border-subtle); background:#000;">
+        <div style="font-size:12px; line-height:1.4; color:var(--text-primary); flex:1;">
+          <div style="font-weight:600; margin-bottom:4px;">Prompt:</div>
+          <div id="pubImgPromptPreview" style="color:var(--text-muted); font-size:11.5px; max-height:48px; overflow:hidden; text-overflow:ellipsis;"></div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <label style="display:block; font-size:12px; font-weight:600; margin-bottom:6px; color:var(--text-primary);">Instagram Caption &amp; Hashtags</label>
+        <textarea id="pubImgCaption" rows="3" style="width:100%; border:1px solid var(--border-subtle); border-radius:6px; padding:8px 10px; font-size:12.5px; font-family:inherit; background:var(--surface-card); color:var(--text-primary); box-sizing:border-box; resize:vertical;" placeholder="Enter Instagram post caption and hashtags..."></textarea>
+      </div>
+
+      <div style="background:var(--surface-nested); border:1px solid var(--border-subtle); border-radius:8px; padding:10px 12px; font-size:11.5px; margin-bottom:14px; line-height:1.5;">
+        <div><strong>Public Hosting:</strong> Media will be hosted via Cloudinary (Meta Graph API requires public HTTPS).</div>
+        <div style="margin-top:3px;"><strong>Destination Account:</strong> <span style="font-weight:600; color:var(--text-primary);">{{ ig_status.account_label or 'Instagram' }}</span> ({{ ig_status.login_method or 'facebook_login' }})</div>
+      </div>
+
+      <label style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--text-primary); cursor:pointer; margin-bottom:16px;">
+        <input type="checkbox" id="chkConfirmPublishImage" style="width:16px; height:16px; accent-color:#4f46e5;">
+        <span>I explicitly authorize MINT to publish this image live to Instagram.</span>
+      </label>
+
+      <div id="pubImgStatusBox" style="display:none; padding:10px 12px; border-radius:6px; font-size:12px; margin-bottom:14px; line-height:1.4;"></div>
+
+      <div style="display:flex; justify-content:flex-end; gap:10px;">
+        <button type="button" onclick="closePublishImageModal()" class="neo-btn" style="padding:8px 16px;">Cancel</button>
+        <button type="button" id="btnExecutePublishImage" onclick="executePublishStandaloneImage()" class="neo-btn neo-btn-primary" style="padding:8px 18px; background:var(--accent-primary); color:#fff; font-weight:600;">Approve &amp; Publish</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Twice-Daily YouTube Schedule Configuration Modal -->
   <div id="scheduleConfigModal" class="modal-backdrop" style="display:none;">
     <div class="modal-box">
@@ -1004,11 +1051,11 @@
       const btn = document.getElementById('btnGenerateImage');
       const statusBox = document.getElementById('imageGenStatus');
       btn.disabled = true;
-      btn.innerText = 'Calling Gemini Interactions API...';
+      btn.innerText = 'Generating via Cloudflare Workers AI...';
       statusBox.style.display = 'block';
       statusBox.style.background = '#f1f5f9';
       statusBox.style.color = '#334155';
-      statusBox.innerText = 'Invoking gemini-3.1-flash-image model...';
+      statusBox.innerText = 'Invoking @cf/black-forest-labs/flux-1-schnell model...';
 
       const payload = {
         prompt: document.getElementById('imgPrompt').value,
@@ -1088,6 +1135,78 @@
         }
       } catch (err) {
         alert('Publish request failed: ' + err.message);
+        btn.disabled = false;
+        btn.innerText = 'Approve & Publish';
+      }
+    }
+
+    let publishTargetImageId = null;
+
+    function openPublishStandaloneImageModal(imageId, promptText, fileUrl) {
+      publishTargetImageId = imageId;
+      document.getElementById('pubImgAssetId').innerText = '#' + imageId;
+      document.getElementById('pubImgThumbnail').src = fileUrl || '';
+      document.getElementById('pubImgPromptPreview').innerText = promptText || '';
+      const cleanPrompt = (promptText || '').trim();
+      document.getElementById('pubImgCaption').value = cleanPrompt ? `${cleanPrompt}\n\n#mint #aiart #flux` : '#mint #aiart #flux';
+      document.getElementById('chkConfirmPublishImage').checked = false;
+      const statusBox = document.getElementById('pubImgStatusBox');
+      statusBox.style.display = 'none';
+      statusBox.innerText = '';
+      const btn = document.getElementById('btnExecutePublishImage');
+      btn.disabled = false;
+      btn.innerText = 'Approve & Publish';
+      document.getElementById('publishImageModal').style.display = 'flex';
+    }
+
+    function closePublishImageModal() {
+      document.getElementById('publishImageModal').style.display = 'none';
+      publishTargetImageId = null;
+    }
+
+    async function executePublishStandaloneImage() {
+      if (!publishTargetImageId) return;
+      const chk = document.getElementById('chkConfirmPublishImage');
+      if (!chk.checked) {
+        alert('Please check the confirmation box to approve live Instagram publishing.');
+        return;
+      }
+      const caption = document.getElementById('pubImgCaption').value.trim();
+      const btn = document.getElementById('btnExecutePublishImage');
+      const statusBox = document.getElementById('pubImgStatusBox');
+      btn.disabled = true;
+      btn.innerText = 'Publishing to Meta...';
+      statusBox.style.display = 'block';
+      statusBox.style.background = '#f1f5f9';
+      statusBox.style.color = '#334155';
+      statusBox.innerText = 'Uploading to Cloudinary & creating Meta media container...';
+
+      try {
+        const res = await fetch(`/api/images/${publishTargetImageId}/publish_instagram`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ confirmed: true, caption: caption })
+        });
+        const data = await res.json();
+        if (data.success) {
+          statusBox.style.background = '#dcfce7';
+          statusBox.style.color = '#15803d';
+          statusBox.innerText = '🎉 ' + (data.message || 'Published to Instagram successfully!');
+          setTimeout(() => {
+            closePublishImageModal();
+            location.reload();
+          }, 1500);
+        } else {
+          statusBox.style.background = '#fee2e2';
+          statusBox.style.color = '#b91c1c';
+          statusBox.innerText = 'Publishing failed: ' + (data.error || 'Unknown error');
+          btn.disabled = false;
+          btn.innerText = 'Approve & Publish';
+        }
+      } catch (err) {
+        statusBox.style.background = '#fee2e2';
+        statusBox.style.color = '#b91c1c';
+        statusBox.innerText = 'Request failed: ' + err.message;
         btn.disabled = false;
         btn.innerText = 'Approve & Publish';
       }

@@ -42,11 +42,12 @@
 <body>
   <nav class="global-nav">
     <div class="nav-links">
-      <a href="/" class="nav-link">Dashboard</a>
+      <a href="/" class="nav-link">Overview</a>
+      <a href="/youtube-clips" class="nav-link">YouTube Clips</a>
       <a href="/studio" class="nav-link">Content Studio</a>
       <a href="/products" class="nav-link">Digital Products</a>
       <a href="/affiliates" class="nav-link">Affiliate Hub</a>
-      <a href="/portfolio" class="nav-link active">Venture Portfolio</a>
+      <a href="/portfolio" class="nav-link active">Portfolio</a>
       <a href="/storefront" class="nav-link" target="_blank">Storefront ↗</a>
     </div>
     <div style="display: flex; gap: 12px; align-items: center;">
@@ -63,7 +64,6 @@
     </div>
   </header>
 
-  <!-- High-Level Portfolio Metrics -->
   <div class="metrics-row">
     <div class="metric-box">
       <div class="metric-label">Digital Products in Market</div>
@@ -88,7 +88,6 @@
   </div>
 
   <div class="portfolio-grid">
-    <!-- Left Column: Paper Capital Reinvestment -->
     <div class="neo-card">
       <div class="card-title">
         <span>Paper Surplus Allocations</span>
@@ -129,7 +128,6 @@
       {% endif %}
     </div>
 
-    <!-- Right Column: Venture Performance Highlights -->
     <div class="neo-card">
       <div class="card-title">
         <span>Active Digital Products &amp; Offers</span>
@@ -163,7 +161,6 @@
     </div>
   </div>
 
-  <!-- Historical Experiment Track Record -->
   <div class="neo-card" style="margin-top:24px;">
     <div class="card-title">
       <span>Historical Venture Runs ({{ experiments|length }})</span>

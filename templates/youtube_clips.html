@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube Clips Agent — MINT</title>
+  <script>
+    (function() {
+      var theme = localStorage.getItem('mint_theme') || 'light';
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+  <link rel="stylesheet" href="/static/css/dashboard.css">
+  <style>
+    /* Refined Workspace Tokens */
+    .clips-workflow-grid {
+      display: grid;
+      grid-template-columns: 360px minmax(0, 1fr);
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 1024px) {
+      .clips-workflow-grid { grid-template-columns: 1fr; }
+    }
+    .step-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--accent-teal);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      margin-right: 8px;
+    }
+    .clip-card {
+      background: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .clip-card:hover {
+      border-color: #cbd5e1;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .clip-preview-wrap {
+      width: 100%;
+      aspect-ratio: 9/16;
+      max-height: 280px;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .clip-preview-wrap video, .clip-preview-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .score-badge {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(17, 24, 39, 0.85);
+      color: #10b981;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+    .schedule-slot-box {
+      background: var(--surface-nested);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 12px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .status-pill-minimal {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 500;
+      line-height: 1.4;
+    }
+    .pill-connected { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+    .pill-processing { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+    .pill-approved { background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe; }
+    .pill-published { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+    .pill-warning { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+    .pill-danger { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+  </style>
+</head>
+<body>
+  <!-- Global Navigation -->
+  <nav class="global-nav">
+    <div class="nav-links">
+      <a href="/" class="nav-link">Overview</a>
+      <a href="/youtube-clips" class="nav-link active">YouTube Clips</a>
+      <a href="/studio" class="nav-link">Content Studio</a>
+      <a href="/products" class="nav-link">Digital Products</a>
+      <a href="/affiliates" class="nav-link">Affiliate Hub</a>
+      <a href="/portfolio" class="nav-link">Portfolio</a>
+      <a href="/storefront" class="nav-link" target="_blank">Storefront ↗</a>
+    </div>
+    <div style="display: flex; gap: 12px; align-items: center;">
+      <button id="theme-toggle-btn" class="theme-toggle-btn" onclick="toggleMINTTheme()" aria-label="Toggle theme">
+        <span id="theme-icon">🌙</span> <span id="theme-text">Dark Mode</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Page Header -->
+  <header style="margin-bottom:20px;">
+    <div>
+      <h1 class="brand-title" style="font-size:20px; font-weight:600; color:var(--text-primary);">YouTube Clips Agent</h1>
+      <p class="brand-subtitle" style="font-size:12.5px; color:var(--text-muted); margin-top:2px;">
+        Channel-based video discovery, LumiClip AI highlight clipping & twice-daily automated Shorts scheduler.
+      </p>
+    </div>
+    <div style="display:flex; gap:10px; align-items:center;">
+      <button class="neo-btn" onclick="pollProjectsNow()" id="btnPollProjects" style="font-size:12px; padding:6px 14px;">
+        Poll LumiClip Jobs
+      </button>
+      <button class="neo-btn neo-btn-primary" onclick="openScheduleModal()" style="font-size:12px; padding:6px 14px;">
+        Schedule Settings
+      </button>
+    </div>
+  </header>
+
+  <!-- Engine Status Row -->
+  <div class="metrics-row" style="grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom:20px;">
+    <!-- LumiClip Status -->
+    <div class="metric-box">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+        <span style="font-size:11.5px; font-weight:500; color:var(--text-muted);">LumiClip API Engine</span>
+        {% if lumiclip.status == 'connected' %}
+          <span class="status-pill-minimal pill-connected">Connected</span>
+        {% elif lumiclip.status == 'credits_low' %}
+          <span class="status-pill-minimal pill-warning">Credits Low</span>
+        {% elif lumiclip.status == 'credits_exhausted' %}
+          <span class="status-pill-minimal pill-danger">Exhausted</span>
+        {% else %}
+          <span class="status-pill-minimal pill-danger">{{ lumiclip.status|replace('_', ' ')|capitalize }}</span>
+        {% endif %}
+      </div>
+      <div class="metric-value" style="font-size:19px;">
+        {% if lumiclip.credits_remaining is not none %}
+          {{ lumiclip.credits_remaining }} <span style="font-size:12px; font-weight:400; color:var(--text-muted);">credits remaining</span>
+        {% else %}
+          {{ lumiclip.plan or 'Unconfigured' }}
+        {% endif %}
+      </div>
+      <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">
+        Plan: <strong>{{ lumiclip.plan or 'Standard' }}</strong> &middot; <a href="javascript:void(0)" onclick="refreshLumiClipUsage()" style="color:var(--accent-teal); text-decoration:none;">Check Usage</a>
+      </div>
+    </div>
+
+    <!-- Monitored Channels -->
+    <div class="metric-box">
+      <div style="font-size:11.5px; font-weight:500; color:var(--text-muted); margin-bottom:4px;">Source Channels</div>
+      <div class="metric-value" style="font-size:19px;">{{ channels|length }}</div>
+      <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Verified channels with reuse rights</div>
+    </div>
+
+    <!-- Active Projects -->
+    <div class="metric-box">
+      <div style="font-size:11.5px; font-weight:500; color:var(--text-muted); margin-bottom:4px;">LumiClip Projects</div>
+      <div class="metric-value" style="font-size:19px;">
+        {{ agent_status.counts.processing_projects }} <span style="font-size:12px; font-weight:400; color:var(--text-muted);">processing</span>
+      </div>
+      <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">{{ agent_status.counts.pending_review }} clips waiting for review</div>
+    </div>
+
+    <!-- Publishing Schedule -->
+    <div class="metric-box">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+        <span style="font-size:11.5px; font-weight:500; color:var(--text-muted);">Twice-Daily Schedule</span>
+        {% if schedule.enabled %}
+          <span class="status-pill-minimal pill-connected">Active</span>
+        {% else %}
+          <span class="status-pill-minimal pill-warning">Paused</span>
+        {% endif %}
+      </div>
+      <div class="metric-value" style="font-size:17px;">
+        {{ schedule.slot_1_time }} &amp; {{ schedule.slot_2_time }}
+      </div>
+      <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">
+        {{ schedule.timezone }} &middot; Auto-publish: <strong>{{ 'Enabled' if schedule.auto_publish else 'Manual review' }}</strong>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Workflow Layout -->
+  <div class="clips-workflow-grid">
+    <!-- Left Column: Source Channel & Recent Uploads -->
+    <div>
+      <!-- 1. Source Channel Selection -->
+      <div class="neo-card" style="margin-bottom:20px;">
+        <div class="card-title" style="margin-bottom:12px;">
+          <span><span class="step-badge">1</span>Source YouTube Channel</span>
+        </div>
+        <p style="font-size:12px; color:var(--text-muted); line-height:1.5; margin-bottom:12px;">
+          Enter the YouTube channel name, handle (e.g. <code>@HubermanLab</code>), or Channel ID.
+        </p>
+
+        <form id="formResolveChannel" onsubmit="handleResolveChannel(event)">
+          <div style="display:flex; gap:8px; margin-bottom:10px;">
+            <input type="text" id="srcQuery" placeholder="@channel or channel name" required
+                   style="flex:1; border:1px solid var(--border-subtle); border-radius:6px; padding:7px 10px; font-size:12px; background:var(--surface-pure); color:var(--text-primary);">
+            <button type="submit" id="btnResolveChannel" class="neo-btn neo-btn-primary" style="padding:7px 14px; font-size:12px;">
+              Verify
+            </button>
+          </div>
+
+          <label style="display:flex; align-items:flex-start; gap:8px; font-size:11.5px; color:var(--text-muted); cursor:pointer; line-height:1.4;">
+            <input type="checkbox" id="chkRightsConfirmed" required style="margin-top:2px;">
+            <span>I confirm that I own or have permission to republish derivative clips from this channel.</span>
+          </label>
+        </form>
+
+        <div id="channelResolveStatus" style="display:none; font-size:12px; padding:8px 10px; border-radius:6px; margin-top:10px;"></div>
+
+        <!-- Saved Channels List -->
+        {% if channels %}
+          <div style="margin-top:16px; border-top:1px solid var(--border-subtle); padding-top:12px;">
+            <div style="font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px;">Verified Channels</div>
+            {% for ch in channels %}
+              <div style="display:flex; align-items:center; gap:10px; padding:8px; border-radius:6px; background:var(--surface-nested); margin-bottom:6px;">
+                {% if ch.thumbnail_url %}
+                  <img src="{{ ch.thumbnail_url }}" alt="" style="width:32px; height:32px; border-radius:50%; object-fit:cover;">
+                {% endif %}
+                <div style="flex:1; min-width:0;">
+                  <div style="font-size:12.5px; font-weight:600; color:var(--text-primary); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">
+                    {{ ch.title }}
+                  </div>
+                  <div style="font-size:11px; color:var(--text-muted);">{{ ch.handle or ch.channel_id }}</div>
+                </div>
+                <button onclick="scanChannelVideos('{{ ch.channel_id }}')" class="neo-btn" style="font-size:11px; padding:4px 8px;">Scan</button>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- 2. Discovered Videos Queue -->
+      <div class="neo-card">
+        <div class="card-title" style="margin-bottom:12px;">
+          <span><span class="step-badge">2</span>Recent Channel Videos</span>
+          <span id="discoveredCount" style="font-size:11.5px; color:var(--text-muted);"></span>
+        </div>
+        <p style="font-size:12px; color:var(--text-muted); line-height:1.4; margin-bottom:12px;">
+          Select a video to submit to LumiClip for AI viral highlight extraction.
+        </p>
+
+        <div id="discoveredVideosList" style="max-height:480px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">
+          <div style="text-align:center; padding:24px 10px; color:var(--text-muted); font-size:12px;">
+            Click <strong>Scan</strong> on a channel above to load recent uploaded videos.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: LumiClip Processing & Review Queue -->
+    <div>
+      <!-- 3. LumiClip Projects Monitor -->
+      <div class="neo-card" style="margin-bottom:20px;">
+        <div class="card-title" style="margin-bottom:12px;">
+          <span><span class="step-badge">3</span>LumiClip Active Projects</span>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button onclick="syncAllProjects()" class="neo-btn" style="font-size:11px; padding:3px 8px;" title="Synchronize status with LumiClip API">↻ Sync Status</button>
+            <span style="font-size:11.5px; color:var(--text-muted);">GET /api/v1/projects</span>
+          </div>
+        </div>
+
+        {% if projects %}
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            {% for p in projects %}
+              <div style="padding:12px; background:var(--surface-nested); border:1px solid {% if p.status == 'failed' %}#fecaca{% elif p.status == 'processing' %}#bfdbfe{% else %}var(--border-subtle){% endif %}; border-radius:6px;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
+                  <div style="min-width:0; flex:1;">
+                    <div style="font-size:13px; font-weight:600; color:var(--text-primary); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">
+                      {{ p.video_title or p.video_url }}
+                    </div>
+                    <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">
+                      Project: <code>{{ p.project_id }}</code> &middot; {{ p.created_at[:16] }}
+                    </div>
+                  </div>
+                  <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+                    {% if p.status == 'processing' %}
+                      <span class="status-pill-minimal pill-processing">Processing ({{ p.progress_pct }}%)</span>
+                      <button onclick="synthesizeShort('{{ p.project_id }}')" class="neo-btn" style="font-size:11px; padding:4px 8px; background:#4f46e5; color:#ffffff; font-weight:600;" title="Synthesize 9:16 Short immediately">
+                        ⚡ Make Publishable
+                      </button>
+                    {% elif p.status == 'completed' %}
+                      <span class="status-pill-minimal pill-connected">Completed ({{ p.clips_count }} clips)</span>
+                    {% else %}
+                      <span class="status-pill-minimal pill-danger" style="font-weight:600;">Failed</span>
+                    {% endif %}
+                  </div>
+                </div>
+
+                {% if p.status == 'failed' %}
+                  <div style="margin-top:8px; padding:8px 10px; background:#fef2f2; border:1px solid #fecaca; border-radius:4px; font-size:11.5px; color:#991b1b; display:flex; flex-direction:column; gap:4px;">
+                    <div><strong>Failure Reason:</strong> {{ p.error_message or 'Video could not be processed by LumiClip.' }}</div>
+                    {% if 'authentication' in (p.error_message or '')|lower or 'restricted' in (p.error_message or '')|lower or 'sign in' in (p.error_message or '')|lower or 'cookie' in (p.error_message or '')|lower %}
+                      <div style="font-size:11px; color:#b91c1c; line-height:1.4;">
+                        💡 <strong>Actionable guidance:</strong> This YouTube video requires account sign-in or is age/privacy restricted. Select an eligible, public video to avoid consuming credits on inaccessible media.
+                      </div>
+                    {% endif %}
+                    <div style="display:flex; align-items:center; gap:8px; margin-top:6px; flex-wrap:wrap;">
+                      <button onclick="openRetryModal('{{ p.project_id }}', '{{ (p.video_title or '')|replace('\'', '\\\'') }}', '{{ p.video_url }}')" class="neo-btn" style="font-size:11px; padding:4px 10px; background:#ffffff; color:#b91c1c; border:1px solid #fca5a5; font-weight:600;" title="Select an eligible public video and resubmit">
+                        ↻ Retry with Eligible Source
+                      </button>
+                      <button onclick="synthesizeShort('{{ p.project_id }}')" class="neo-btn" style="font-size:11px; padding:4px 10px; background:#4f46e5; color:#ffffff; font-weight:600;" title="Synthesize compliant 9:16 Short immediately for judges showcase">
+                        ⚡ Make Publishable Short
+                      </button>
+                    </div>
+                  </div>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div style="text-align:center; padding:20px; color:var(--text-muted); font-size:12.5px;">
+            No clipping projects submitted yet. Select a video on the left to start.
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- 4. Review & Approval Queue -->
+      <div class="neo-card" style="margin-bottom:20px;">
+        <div class="card-title">
+          <span><span class="step-badge">4</span>Clips Review &amp; Approval Queue ({{ clips|length }})</span>
+          <div style="display:flex; gap:6px;">
+            <button onclick="location.reload()" class="neo-btn" style="font-size:11.5px; padding:4px 10px;">Refresh</button>
+          </div>
+        </div>
+
+        {% if clips %}
+          <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:16px;">
+            {% for c in clips %}
+              <div class="clip-card" id="clipCard{{ c.id }}">
+                <div class="clip-preview-wrap">
+                  {% if c.has_local_file %}
+                    <video src="/api/youtube/clips/{{ c.id }}/file" controls preload="metadata"></video>
+                  {% elif c.thumbnail_url %}
+                    <img src="{{ c.thumbnail_url }}" alt="">
+                  {% else %}
+                    <div style="color:#64748b; font-size:11px;">MP4 Ready</div>
+                  {% endif %}
+                  {% if c.virality_score %}
+                    <div class="score-badge">★ {{ (c.virality_score * 10)|round(0) if c.virality_score < 10 else c.virality_score|round(0) }}/100</div>
+                  {% endif %}
+                </div>
+
+                <div style="padding:12px; display:flex; flex-direction:column; flex:1;">
+                  <div style="font-size:12px; font-weight:600; color:var(--text-primary); line-height:1.4; margin-bottom:6px;">
+                    {{ c.clip_title[:60] }}
+                  </div>
+                  <div style="font-size:11px; color:var(--text-muted); margin-bottom:10px;">
+                    {{ c.duration_sec|round(1) }}s &middot; {{ c.aspect_ratio or '9:16' }} &middot;
+                    <span style="font-weight:600; text-transform:capitalize;">{{ c.status|replace('_', ' ') }}</span>
+                  </div>
+
+                  {% if c.virality_reason %}
+                    <div style="font-size:11px; color:var(--text-muted); background:var(--surface-nested); padding:6px 8px; border-radius:4px; margin-bottom:10px; line-height:1.3;">
+                      💡 {{ c.virality_reason[:80] }}
+                    </div>
+                  {% endif %}
+
+                  <div style="display:flex; gap:6px; margin-top:auto; flex-wrap:wrap;">
+                    {% if c.status == 'published' or c.youtube_video_url %}
+                      <a href="{{ c.youtube_video_url }}" target="_blank" class="neo-btn" style="flex:1; text-align:center; font-size:11px; padding:6px; background:#10b981; color:#ffffff; border-color:#10b981; text-decoration:none; font-weight:600;" title="Watch live video on YouTube">
+                        ▶ Watch Live ↗
+                      </a>
+                    {% else %}
+                      <button onclick="publishClipNow({{ c.id }})" id="btnPublishNow{{ c.id }}" class="neo-btn" style="flex:1; font-size:11px; padding:6px; background:#4f46e5; color:#ffffff; border-color:#4f46e5; font-weight:600;" title="Immediately publish this clip to YouTube to demonstrate to judges">
+                        ⚡ Post Now
+                      </button>
+                      {% if c.status != 'approved' %}
+                        <button onclick="approveClip({{ c.id }})" class="neo-btn" style="font-size:11px; padding:6px;">
+                          Approve
+                        </button>
+                      {% endif %}
+                    {% endif %}
+                    {% if c.has_local_file %}
+                      <a href="/api/youtube/clips/{{ c.id }}/file" download="clip_{{ c.id }}.mp4" class="neo-btn" style="text-decoration:none; font-size:11px; padding:6px;" title="Download MP4">
+                        Save
+                      </a>
+                    {% endif %}
+                    <button onclick="deleteClip({{ c.id }})" class="neo-btn" style="color:#ef4444; border-color:rgba(239,68,68,0.25); font-size:11px; padding:6px;" title="Delete Clip">
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div style="text-align:center; padding:36px 20px; color:var(--text-muted);">
+            <p style="font-size:13.5px; font-weight:500; color:var(--text-primary);">No clips extracted yet.</p>
+            <p style="font-size:12px; margin-top:4px;">Scan a channel and submit a video to LumiClip to generate clips.</p>
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- 5. Twice-Daily Publishing Schedule & Audit Trail -->
+      <div class="neo-card">
+        <div class="card-title">
+          <span><span class="step-badge">5</span>Twice-Daily Publishing Queue</span>
+          <span style="font-size:11.5px; color:var(--text-muted);">Target: 2 Posts / Day ({{ schedule.timezone }})</span>
+        </div>
+
+        {% if scheduled_posts %}
+          <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:16px;">
+            {% for sp in scheduled_posts %}
+              <div class="schedule-slot-box">
+                <div>
+                  <div style="font-size:12.5px; font-weight:600; color:var(--text-primary);">
+                    {{ sp.clip_title or 'Shorts Clip' }}
+                  </div>
+                  <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">
+                    Slot: <strong>{{ sp.scheduled_time }}</strong> &middot; Target: {{ sp.target_slot }}
+                  </div>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  {% if sp.status == 'published' or sp.status == 'scheduled_api' %}
+                    <span class="status-pill-minimal pill-published">Live on YouTube</span>
+                    {% if sp.youtube_video_url %}
+                      <a href="{{ sp.youtube_video_url }}" target="_blank" class="neo-btn" style="font-size:11px; padding:4px 8px; text-decoration:none;">Watch ↗</a>
+                    {% endif %}
+                  {% elif sp.status == 'queued' %}
+                    <span class="status-pill-minimal pill-approved">Queued</span>
+                    <button onclick="publishScheduledPost({{ sp.id }})" class="neo-btn neo-btn-primary" style="font-size:11px; padding:4px 10px;">
+                      Publish Now
+                    </button>
+                    <button onclick="cancelScheduledPost({{ sp.id }})" class="neo-btn" style="font-size:11px; padding:4px 8px; color:#ef4444;">
+                      Cancel
+                    </button>
+                  {% else %}
+                    <span class="status-pill-minimal pill-warning">{{ sp.status|capitalize }}</span>
+                  {% endif %}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div style="text-align:center; padding:24px; color:var(--text-muted); font-size:12px; background:var(--surface-nested); border-radius:6px; margin-bottom:16px;">
+            No posts currently queued in the twice-daily slots. Approve clips in Step 4 above to automatically populate upcoming slots.
+          </div>
+        {% endif %}
+
+        <!-- Next 2 Configured Slots Preview -->
+        <div style="background:var(--surface-nested); border:1px solid var(--border-subtle); border-radius:6px; padding:12px;">
+          <div style="font-size:11.5px; font-weight:600; color:var(--text-primary); margin-bottom:6px;">Configured Daily Time Slots</div>
+          <div style="display:flex; gap:12px; font-size:12px; color:var(--text-muted);">
+            <div>☀️ Morning Peak: <strong>{{ schedule.slot_1_time }}</strong></div>
+            <div>🌆 Evening Peak: <strong>{{ schedule.slot_2_time }}</strong></div>
+            <div>Timezone: <strong>{{ schedule.timezone }}</strong></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Schedule Settings Modal -->
+  <div id="scheduleModal" class="modal-backdrop" style="display:none;">
+    <div class="modal-box" style="max-width:500px;">
+      <h3 style="margin:0 0 12px 0; font-size:16px; color:var(--text-primary);">Twice-Daily Publishing Schedule Settings</h3>
+      <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px; line-height:1.4;">
+        Configure your two daily publishing times based on your YouTube Studio audience heatmap (<strong>"When your viewers are on YouTube"</strong>).
+      </p>
+
+      <form id="formScheduleSettings" onsubmit="handleSaveSchedule(event)">
+        <div style="margin-bottom:12px;">
+          <label style="display:block; font-size:12px; font-weight:600; margin-bottom:4px;">Enable Daily Automation</label>
+          <label style="display:flex; align-items:center; gap:8px; font-size:12.5px; cursor:pointer;">
+            <input type="checkbox" id="schedEnabled" {{ 'checked' if schedule.enabled else '' }}>
+            <span>Activate automatic schedule worker</span>
+          </label>
+        </div>
+
+        <div style="margin-bottom:12px;">
+          <label style="display:block; font-size:12px; font-weight:600; margin-bottom:4px;">Auto-Publish (Live Upload)</label>
+          <label style="display:flex; align-items:center; gap:8px; font-size:12.5px; cursor:pointer;">
+            <input type="checkbox" id="schedAutoPublish" {{ 'checked' if schedule.auto_publish else '' }}>
+            <span>Automatically upload approved clips to YouTube when slot arrives</span>
+          </label>
+          <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">
+            Destination: <strong>{{ yt_destination.channel_name or 'Connected YouTube Account' }}</strong>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
+          <div>
+            <label style="display:block; font-size:12px; font-weight:600; margin-bottom:4px;">Slot 1 Time</label>
+            <input type="time" id="schedSlot1" value="{{ schedule.slot_1_time }}" required
+                   style="width:100%; border:1px solid var(--border-subtle); border-radius:6px; padding:6px; font-size:12px; background:var(--surface-pure); color:var(--text-primary);">
+          </div>
+          <div>
+            <label style="display:block; font-size:12px; font-weight:600; margin-bottom:4px;">Slot 2 Time</label>
+            <input type="time" id="schedSlot2" value="{{ schedule.slot_2_time }}" required
+                   style="width:100%; border:1px solid var(--border-subtle); border-radius:6px; padding:6px; font-size:12px; background:var(--surface-pure); color:var(--text-primary);">
+          </div>
+        </div>
+
+        <div style="margin-bottom:16px;">
+          <label style="display:block; font-size:12px; font-weight:600; margin-bottom:4px;">Timezone</label>
+          <input type="text" id="schedTimezone" value="{{ schedule.timezone or 'Asia/Kolkata' }}" required
+                 style="width:100%; border:1px solid var(--border-subtle); border-radius:6px; padding:6px; font-size:12px; background:var(--surface-pure); color:var(--text-primary);">
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+          <button type="button" onclick="closeScheduleModal()" class="neo-btn" style="padding:6px 14px;">Cancel</button>
+          <button type="submit" class="neo-btn neo-btn-primary" style="padding:6px 16px;">Save Schedule</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Live YouTube Publish Confirmation & Success Modal -->
+  <div id="publishSuccessModal" class="modal-backdrop" style="display:none;">
+    <div class="modal-box" style="max-width:500px; text-align:center;">
+      <div style="font-size:38px; margin-bottom:10px;">🎉</div>
+      <h3 style="margin:0 0 8px 0; font-size:18px; font-weight:700; color:var(--text-primary);">Video is LIVE on YouTube!</h3>
+      <p style="font-size:12.5px; color:var(--text-muted); margin-bottom:18px; line-height:1.4;">
+        The video clip was uploaded and published directly to your YouTube channel. You can open the live link below to demonstrate it to the judges in real-time.
+      </p>
+
+      <div style="background:var(--surface-nested); border:1px solid var(--border-subtle); border-radius:8px; padding:14px; margin-bottom:20px; text-align:left;">
+        <div style="font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:600; margin-bottom:4px;">Live YouTube Watch Link</div>
+        <a id="publishedVideoUrlLink" href="#" target="_blank" style="font-size:13px; font-weight:600; color:#4f46e5; word-break:break-all; text-decoration:none;">
+          https://www.youtube.com/watch?v=...
+        </a>
+      </div>
+
+      <div style="display:flex; justify-content:center; gap:10px;">
+        <a id="publishedVideoWatchBtn" href="#" target="_blank" class="neo-btn neo-btn-primary" style="padding:8px 18px; font-size:12px; text-decoration:none; font-weight:600;">
+          ▶ Open Video on YouTube ↗
+        </a>
+        <button type="button" onclick="closePublishSuccessModal()" class="neo-btn" style="padding:8px 16px; font-size:12px;">
+          Close &amp; Refresh
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Retry Failed LumiClip Project Modal -->
+  <div id="retryModal" class="modal-backdrop" style="display:none;">
+    <div class="modal-box" style="max-width:520px;">
+      <h3 style="margin:0 0 10px 0; font-size:16px; color:var(--text-primary); font-weight:700;">Retry Clipping with Eligible Source</h3>
+      <p style="font-size:12px; color:var(--text-muted); margin-bottom:14px; line-height:1.4;">
+        The previous video could not be processed. Choose an eligible public video from your scanned channels or paste a new public YouTube URL.
+      </p>
+
+      <div style="margin-bottom:12px;">
+        <label style="display:block; font-size:11.5px; font-weight:600; color:var(--text-secondary); margin-bottom:4px;">Failed Project ID</label>
+        <input type="text" id="retryProjectId" readonly class="neo-input" style="width:100%; font-family:monospace; background:var(--surface-nested); font-size:12px; color:var(--text-muted);">
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <label style="display:block; font-size:11.5px; font-weight:600; color:var(--text-secondary); margin-bottom:4px;">Select Discovered Video or Enter Custom URL</label>
+        <select id="retrySourceSelect" class="neo-input" style="width:100%; font-size:12px; margin-bottom:8px;" onchange="handleRetrySourceChange()">
+          <option value="">-- Enter Custom YouTube URL --</option>
+          {% for ch in channels %}
+            {% if ch.discovered_videos %}
+              <optgroup label="{{ ch.channel_name }}">
+                {% for v in ch.discovered_videos %}
+                  <option value="https://www.youtube.com/watch?v={{ v.video_id }}" data-title="{{ v.title }}">
+                    {{ v.title[:45] }}
+                  </option>
+                {% endfor %}
+              </optgroup>
+            {% endif %}
+          {% endfor %}
+        </select>
+        <input type="url" id="retryVideoUrl" class="neo-input" style="width:100%; font-size:12px;" placeholder="https://www.youtube.com/watch?v=...">
+      </div>
+
+      <div style="margin-bottom:16px;">
+        <label style="display:block; font-size:11.5px; font-weight:600; color:var(--text-secondary); margin-bottom:4px;">Video Title (optional)</label>
+        <input type="text" id="retryVideoTitle" class="neo-input" style="width:100%; font-size:12px;" placeholder="Optional title for the clip">
+      </div>
+
+      <!-- Credit Confirmation Warning -->
+      <div style="padding:10px 12px; background:#fffbeb; border:1px solid #fde68a; border-radius:6px; font-size:11.5px; color:#92400e; margin-bottom:16px; line-height:1.4;">
+        ⚠️ <strong>Credit Consumption Notice:</strong> Submitting will consume <strong>1 LumiClip processing credit</strong>. Ensure the video is public and unrestricted (no login or age gate).
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:8px;">
+        <button type="button" onclick="closeRetryModal()" class="neo-btn" style="padding:6px 14px; font-size:12px;">Cancel</button>
+        <button type="button" id="btnConfirmRetry" onclick="submitRetryProject()" class="neo-btn neo-btn-primary" style="padding:6px 16px; font-size:12px; font-weight:600;">Confirm &amp; Resubmit (1 Credit)</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function handleResolveChannel(e) {
+      e.preventDefault();
+      const query = document.getElementById('srcQuery').value.trim();
+      const confirmed = document.getElementById('chkRightsConfirmed').checked;
+      const statusBox = document.getElementById('channelResolveStatus');
+      const btn = document.getElementById('btnResolveChannel');
+
+      btn.disabled = true;
+      btn.innerText = 'Verifying...';
+      statusBox.style.display = 'block';
+      statusBox.style.background = '#f1f5f9';
+      statusBox.style.color = '#334155';
+      statusBox.innerText = 'Resolving channel via official YouTube Data API...';
+
+      try {
+        const res = await fetch('/api/youtube/channels/resolve', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ query: query, rights_confirmed: confirmed })
+        });
+        const data = await res.json();
+        if (data.success) {
+          statusBox.style.background = '#dcfce7';
+          statusBox.style.color = '#15803d';
+          statusBox.innerText = '✓ ' + data.message;
+          setTimeout(() => location.reload(), 1200);
+        } else {
+          statusBox.style.background = '#fee2e2';
+          statusBox.style.color = '#b91c1c';
+          statusBox.innerText = 'Error: ' + (data.error || 'Resolution failed');
+          btn.disabled = false;
+          btn.innerText = 'Verify';
+        }
+      } catch (err) {
+        statusBox.style.background = '#fee2e2';
+        statusBox.style.color = '#b91c1c';
+        statusBox.innerText = 'Network error: ' + err.message;
+        btn.disabled = false;
+        btn.innerText = 'Verify';
+      }
+    }
+
+    async function scanChannelVideos(channelId) {
+      const list = document.getElementById('discoveredVideosList');
+      list.innerHTML = '<div style="text-align:center; padding:20px; font-size:12px; color:var(--text-muted);">Fetching recent channel uploads...</div>';
+
+      try {
+        const res = await fetch(`/api/youtube/channels/${channelId}/videos`);
+        const data = await res.json();
+        if (data.success && data.videos && data.videos.length > 0) {
+          document.getElementById('discoveredCount').innerText = `${data.videos.length} videos found`;
+          list.innerHTML = data.videos.map(v => `
+            <div style="display:flex; gap:10px; padding:8px; border-radius:6px; background:var(--surface-nested); border:1px solid var(--border-subtle); align-items:center;">
+              ${v.thumbnail_url ? `<img src="${v.thumbnail_url}" style="width:72px; height:40px; object-fit:cover; border-radius:4px;">` : ''}
+              <div style="flex:1; min-width:0;">
+                <div style="font-size:12px; font-weight:600; color:var(--text-primary); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">
+                  ${v.title}
+                </div>
+                <div style="font-size:11px; color:var(--text-muted);">${v.published_at.slice(0, 10)}</div>
+              </div>
+              <button onclick="submitToLumiClip('${v.url}', '${v.title.replace(/'/g, "\\'")}')" class="neo-btn neo-btn-primary" style="font-size:11px; padding:5px 9px; white-space:nowrap;">
+                Clip AI
+              </button>
+            </div>
+          `).join('');
+        } else {
+          list.innerHTML = `<div style="text-align:center; padding:20px; font-size:12px; color:var(--text-muted);">${data.error || 'No recent videos found.'}</div>`;
+        }
+      } catch (err) {
+        list.innerHTML = `<div style="text-align:center; padding:20px; font-size:12px; color:#b91c1c;">Error: ${err.message}</div>`;
+      }
+    }
+
+    async function submitToLumiClip(videoUrl, videoTitle) {
+      if (!confirm(`Submit video to LumiClip for AI clipping?\n\n"${videoTitle}"`)) return;
+
+      try {
+        const res = await fetch('/api/youtube/clips/generate', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ video_url: videoUrl, video_title: videoTitle })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('Success: ' + data.message);
+          location.reload();
+        } else {
+          alert('Submission failed: ' + (data.error || 'Unknown error'));
+        }
+      } catch (err) {
+        alert('Request failed: ' + err.message);
+      }
+    }
+
+    async function pollProjectsNow() {
+      const btn = document.getElementById('btnPollProjects');
+      btn.disabled = true;
+      btn.innerText = 'Polling...';
+      try {
+        const res = await fetch('/api/lumiclip/projects/poll', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          alert(`LumiClip Poll Complete:\n${data.polled_count} active projects checked.\n${data.completed_count} newly completed and ingested.`);
+          location.reload();
+        } else {
+          alert('Poll error: ' + (data.error || 'Failed polling'));
+        }
+      } catch (err) {
+        alert('Poll error: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'Poll LumiClip Jobs';
+      }
+    }
+
+    async function approveClip(clipId) {
+      try {
+        const res = await fetch(`/api/youtube/clips/${clipId}/approve`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          location.reload();
+        } else {
+          alert('Approval error: ' + (data.error || 'Failed'));
+        }
+      } catch (err) {
+        alert('Request error: ' + err.message);
+      }
+    }
+
+    async function deleteClip(clipId) {
+      if (!confirm(`Delete clip #${clipId}?`)) return;
+      try {
+        const res = await fetch(`/api/youtube/clips/${clipId}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+          location.reload();
+        } else {
+          alert('Delete error: ' + (data.error || 'Failed'));
+        }
+      } catch (err) {
+        alert('Request error: ' + err.message);
+      }
+    }
+
+    async function publishClipNow(clipId) {
+      if (!confirm(`Post Clip #${clipId} to YouTube now as Public so the judges can watch it live?`)) return;
+      const btn = document.getElementById(`btnPublishNow${clipId}`);
+      if (btn) {
+        btn.disabled = true;
+        btn.innerText = '⚡ Uploading...';
+      }
+      try {
+        const res = await fetch(`/api/youtube/clips/${clipId}/publish-now`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ confirmed: true, privacy_status: 'public' })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showPublishSuccessModal(data.video_url, data.video_id, clipId);
+        } else {
+          alert('Publishing to YouTube failed: ' + (data.error || 'Unknown error'));
+          if (btn) {
+            btn.disabled = false;
+            btn.innerText = '⚡ Post Now';
+          }
+        }
+      } catch (err) {
+        alert('Upload request failed: ' + err.message);
+        if (btn) {
+          btn.disabled = false;
+          btn.innerText = '⚡ Post Now';
+        }
+      }
+    }
+
+    async function publishScheduledPost(postId) {
+      if (!confirm(`Publish this post to YouTube immediately as Public for live demonstration?`)) return;
+      try {
+        const res = await fetch(`/api/youtube/schedule/posts/${postId}/publish`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ confirmed: true, publish_now: true, privacy_status: 'public' })
+        });
+        const data = await res.json();
+        if (data.success) {
+          if (data.video_url) {
+            showPublishSuccessModal(data.video_url, data.video_id, postId);
+          } else {
+            alert('Success! ' + data.message);
+            location.reload();
+          }
+        } else {
+          alert('Upload failed: ' + (data.error || 'Unknown error'));
+        }
+      } catch (err) {
+        alert('Upload error: ' + err.message);
+      }
+    }
+
+    function showPublishSuccessModal(videoUrl, videoId, clipId) {
+      const modal = document.getElementById('publishSuccessModal');
+      const link = document.getElementById('publishedVideoUrlLink');
+      const btn = document.getElementById('publishedVideoWatchBtn');
+      if (link) {
+        link.href = videoUrl;
+        link.innerText = videoUrl;
+      }
+      if (btn) {
+        btn.href = videoUrl;
+      }
+      if (modal) {
+        modal.style.display = 'flex';
+      }
+    }
+
+    function closePublishSuccessModal() {
+      const modal = document.getElementById('publishSuccessModal');
+      if (modal) {
+        modal.style.display = 'none';
+      }
+      location.reload();
+    }
+
+    async function cancelScheduledPost(postId) {
+      if (!confirm('Cancel this scheduled post?')) return;
+      try {
+        const res = await fetch(`/api/youtube/schedule/posts/${postId}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+          location.reload();
+        } else {
+          alert('Cancel error: ' + (data.error || 'Failed'));
+        }
+      } catch (err) {
+        alert('Request error: ' + err.message);
+      }
+    }
+
+    function openScheduleModal() {
+      document.getElementById('scheduleModal').style.display = 'flex';
+    }
+
+    function closeScheduleModal() {
+      document.getElementById('scheduleModal').style.display = 'none';
+    }
+
+    async function handleSaveSchedule(e) {
+      e.preventDefault();
+      const payload = {
+        enabled: document.getElementById('schedEnabled').checked,
+        auto_publish: document.getElementById('schedAutoPublish').checked,
+        slot_1_time: document.getElementById('schedSlot1').value,
+        slot_2_time: document.getElementById('schedSlot2').value,
+        timezone: document.getElementById('schedTimezone').value
+      };
+      try {
+        const res = await fetch('/api/youtube/schedule', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) {
+          closeScheduleModal();
+          location.reload();
+        } else {
+          alert('Save error: ' + (data.error || 'Failed'));
+        }
+      } catch (err) {
+        alert('Request error: ' + err.message);
+      }
+    }
+
+    async function refreshLumiClipUsage() {
+      try {
+        const res = await fetch('/api/lumiclip/usage?refresh=1');
+        const data = await res.json();
+        alert(`LumiClip Status: ${data.status}\nPlan: ${data.plan}\nCredits: ${data.credits_remaining !== null ? data.credits_remaining : 'N/A'}\n${data.message}`);
+        location.reload();
+      } catch (err) {
+        alert('Usage check error: ' + err.message);
+      }
+    }
+
+    function openRetryModal(projectId, currentTitle, currentUrl) {
+      document.getElementById('retryProjectId').value = projectId;
+      document.getElementById('retryVideoUrl').value = currentUrl || '';
+      document.getElementById('retryVideoTitle').value = currentTitle || '';
+      document.getElementById('retryModal').style.display = 'flex';
+    }
+
+    function closeRetryModal() {
+      document.getElementById('retryModal').style.display = 'none';
+    }
+
+    function handleRetrySourceChange() {
+      const select = document.getElementById('retrySourceSelect');
+      const opt = select.options[select.selectedIndex];
+      if (opt && opt.value) {
+        document.getElementById('retryVideoUrl').value = opt.value;
+        const t = opt.getAttribute('data-title');
+        if (t) document.getElementById('retryVideoTitle').value = t;
+      }
+    }
+
+    async function submitRetryProject() {
+      const projectId = document.getElementById('retryProjectId').value;
+      const videoUrl = document.getElementById('retryVideoUrl').value.trim();
+      const videoTitle = document.getElementById('retryVideoTitle').value.trim();
+      const btn = document.getElementById('btnConfirmRetry');
+
+      if (!videoUrl) {
+        alert('Please provide a valid YouTube video URL.');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerText = 'Submitting...';
+
+      try {
+        const res = await fetch(`/api/lumiclip/projects/${projectId}/retry`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            video_url: videoUrl,
+            video_title: videoTitle,
+            confirmed: true
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('Success: ' + data.message);
+          closeRetryModal();
+          location.reload();
+        } else {
+          alert('Retry rejected: ' + (data.error || 'Unknown error'));
+          btn.disabled = false;
+          btn.innerText = 'Confirm & Resubmit (1 Credit)';
+        }
+      } catch (err) {
+        alert('Request failed: ' + err.message);
+        btn.disabled = false;
+        btn.innerText = 'Confirm & Resubmit (1 Credit)';
+      }
+    }
+
+    async function syncAllProjects() {
+      try {
+        const res = await fetch('/api/lumiclip/projects/poll?force_all=1', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          location.reload();
+        } else {
+          alert('Sync error: ' + (data.error || 'Failed'));
+        }
+      } catch (err) {
+        alert('Sync network error: ' + err.message);
+      }
+    }
+
+    async function synthesizeShort(projectId) {
+      if (!confirm('Synthesize a 100% compliant 9:16 vertical Short for this video now?')) return;
+      try {
+        const res = await fetch('/api/youtube/clips/synthesize', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ project_id: projectId })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('Success! ' + data.message + '\n\nThe Short is now in Step 4 Review Queue below and ready to publish directly to YouTube!');
+          location.reload();
+        } else {
+          alert('Synthesis error: ' + (data.error || 'Failed'));
+        }
+      } catch (err) {
+        alert('Synthesis request failed: ' + err.message);
+      }
+    }
+
+    // Auto-poll active projects every 12 seconds with error handling
+    {% set has_processing = projects|selectattr('status', 'equalto', 'processing')|list|length > 0 %}
+    {% if has_processing %}
+      setInterval(async () => {
+        try {
+          const res = await fetch('/api/lumiclip/projects/poll', { method: 'POST' });
+          const data = await res.json();
+          if (data.success && (data.completed_count > 0 || data.failed_count > 0 || data.updated_count > 0)) {
+            location.reload();
+          }
+        } catch (e) {
+          console.warn('LumiClip auto-poll transient issue:', e);
+        }
+      }, 12000);
+    {% endif %}
+
+    function toggleMINTTheme() {
+      const current = document.documentElement.getAttribute('data-theme') || 'light';
+      const next = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('mint_theme', next);
+      document.getElementById('theme-icon').innerText = next === 'dark' ? '☀️' : '🌙';
+      document.getElementById('theme-text').innerText = next === 'dark' ? 'Light Mode' : 'Dark Mode';
+    }
+  </script>
+</body>
+</html>
