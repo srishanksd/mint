@@ -1,1 +1,34 @@
+# Environments & Secrets
 .env
+.env.*
+!.env.example
+client_secret*.json
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+
+# Testing & Logs
+.pytest_cache/
+*.log
+*.jsonl
+
+# SQLite Database & Backups
+data/*.db
+data/*.db-shm
+data/*.db-wal
+data/backups/
+
+# Generated Venture Deliverables (media & products)
+generated/videos/*
+generated/images/*
+generated/products/*
+!generated/videos/.gitkeep
+!generated/images/.gitkeep
+!generated/products/.gitkeep

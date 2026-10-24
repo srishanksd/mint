@@ -235,6 +235,10 @@ class RealChatAssistant:
         # ── Call AI with real operational context ─────────────────────────────
         ai_res = AIService.generate_chat(messages, context=ctx)
         reply = ai_res.get("reply", "")
+        if not ai_res.get("success") or "API Error" in reply or "quota" in reply.lower():
+            operational = _build_operational_answer(ctx, text)
+            if operational:
+                reply = operational
         action_taken = "No backend state modified."
         intent = "conversational_consultation"
 
