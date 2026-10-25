@@ -4,6 +4,8 @@
 MINT discovers online business opportunities, creates digital product deliverables and marketing media, measures authentic results, audits regulatory compliance, calculates net unit economics, and allocates resulting surplus into a simulated paper investment portfolio.
 
 ---
+[![Architecture diagram](https://gitdiagram.com/diagram-badge.svg)](https://gitdiagram.com/srishanksd/mint?utm_source=readme&utm_medium=badge)
+---
 
 ## 1. Traceability & Metric Source Integrity (Zero-Fabrication Policy)
 
