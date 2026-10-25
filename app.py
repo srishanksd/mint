@@ -12,11 +12,9 @@ from database import init_db
 from routes.dashboard import dashboard_bp
 from routes.experiments import experiments_bp
 from routes.chat import chat_bp
-from routes.storefront import storefront_bp
 from routes.youtube_auth import youtube_auth_bp
 from routes.content_studio import content_studio_bp
 from routes.products import products_bp
-from routes.affiliates import affiliates_bp
 from routes.portfolio import portfolio_bp
 from routes.youtube_clips import youtube_clips_bp
 
@@ -31,12 +29,10 @@ def create_app():
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(experiments_bp)
     app.register_blueprint(chat_bp)
-    app.register_blueprint(storefront_bp)
     app.register_blueprint(youtube_auth_bp)
     app.register_blueprint(content_studio_bp)
     app.register_blueprint(youtube_clips_bp)
     app.register_blueprint(products_bp)
-    app.register_blueprint(affiliates_bp)
     app.register_blueprint(portfolio_bp)
 
     return app

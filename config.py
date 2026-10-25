@@ -10,9 +10,13 @@ GENERATED_DIR = Path(os.getenv("MINT_GENERATED_DIR", BASE_DIR / "generated"))
 DB_PATH = Path(os.getenv("MINT_DB_PATH", DATA_DIR / "mint.db"))
 
 SECRET_KEY = os.getenv("FLASK_SECRET_KEY", "mint-chronoforge-dev-secret-key-2026")
-AI_PROVIDER = os.getenv("AI_PROVIDER", "local_heuristic")
+AI_PROVIDER = os.getenv("AI_PROVIDER", "ollama")
 AI_API_KEY = os.getenv("AI_API_KEY", "")
-AI_MODEL = os.getenv("AI_MODEL", "gemini-3.1-flash-lite")
+AI_MODEL = os.getenv("AI_MODEL", "llama3.2")
+
+OPENSHORTS_MCP_URL = os.getenv("OPENSHORTS_MCP_URL", "http://127.0.0.1:8000/mcp")
+OLLAMA_ENDPOINT = os.getenv("OLLAMA_ENDPOINT", "http://localhost:11434")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2")
 
 PORT = int(os.getenv("PORT", 5000))
 HOST = os.getenv("HOST", "127.0.0.1")

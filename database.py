@@ -599,9 +599,58 @@ def init_db():
     )
     """)
 
-    # YouTube clips additive columns for LumiClip integration
+    # ── OpenShorts MCP Jobs & MCP Audit Tables ──────────────────────────────
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS openshorts_jobs (
+        id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+        job_id              TEXT UNIQUE NOT NULL,
+        provider            TEXT NOT NULL DEFAULT 'openshorts_mcp',
+        source_type         TEXT DEFAULT 'YOUTUBE',
+        video_url           TEXT NOT NULL,
+        video_title         TEXT,
+        source_channel_id   TEXT,
+        source_channel_name TEXT,
+        status              TEXT DEFAULT 'processing',
+        progress_pct        INTEGER DEFAULT 0,
+        clips_count         INTEGER DEFAULT 0,
+        raw_response_json   TEXT,
+        error_message       TEXT,
+        is_test             INTEGER DEFAULT 0,
+        created_at          TEXT NOT NULL,
+        updated_at          TEXT NOT NULL
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS mcp_audit_logs (
+        id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+        server_name         TEXT NOT NULL,
+        tool_name           TEXT NOT NULL,
+        arguments_json      TEXT,
+        result_json         TEXT,
+        is_error            INTEGER DEFAULT 0,
+        duration_ms         INTEGER DEFAULT 0,
+        created_at          TEXT NOT NULL
+    )
+    """)
+
+    # OpenShorts / MCP additive columns for discovered videos
+    cursor.execute("PRAGMA table_info(youtube_discovered_videos)")
+    disc_cols = [row[1] for row in cursor.fetchall()]
+    if "mcp_job_id" not in disc_cols:
+        cursor.execute("ALTER TABLE youtube_discovered_videos ADD COLUMN mcp_job_id TEXT")
+    if "provider" not in disc_cols:
+        cursor.execute("ALTER TABLE youtube_discovered_videos ADD COLUMN provider TEXT DEFAULT 'openshorts_mcp'")
+
+    # YouTube clips additive columns for LumiClip / OpenShorts integration
     cursor.execute("PRAGMA table_info(youtube_clips)")
     clip_cols = [row[1] for row in cursor.fetchall()]
+    if "mcp_job_id" not in clip_cols:
+        cursor.execute("ALTER TABLE youtube_clips ADD COLUMN mcp_job_id TEXT")
+    if "mcp_clip_id" not in clip_cols:
+        cursor.execute("ALTER TABLE youtube_clips ADD COLUMN mcp_clip_id TEXT")
+    if "provider" not in clip_cols:
+        cursor.execute("ALTER TABLE youtube_clips ADD COLUMN provider TEXT DEFAULT 'openshorts_mcp'")
     if "lumiclip_clip_id" not in clip_cols:
         cursor.execute("ALTER TABLE youtube_clips ADD COLUMN lumiclip_clip_id TEXT")
     if "lumiclip_project_id" not in clip_cols:
@@ -622,6 +671,8 @@ def init_db():
         cursor.execute("ALTER TABLE youtube_clips ADD COLUMN youtube_video_url TEXT")
     if "published_at" not in clip_cols:
         cursor.execute("ALTER TABLE youtube_clips ADD COLUMN published_at TEXT")
+    if "content_classification" not in clip_cols:
+        cursor.execute("ALTER TABLE youtube_clips ADD COLUMN content_classification TEXT DEFAULT 'verified_footage'")
 
     # YouTube schedules additive columns
     cursor.execute("PRAGMA table_info(youtube_schedules)")
