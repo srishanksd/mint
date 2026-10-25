@@ -148,6 +148,16 @@ async function fetchOverview() {
     // Artifact & Digital Product Deliverable
     if (data.artifact) {
       document.getElementById("card-artifact").style.display = "block";
+      const complianceBadge = document.getElementById("badge-compliance");
+      if (complianceBadge) {
+        if (data.artifact.file_status === "missing_asset") {
+          complianceBadge.className = "status-pill failed";
+          complianceBadge.innerText = "Missing Asset - Media Not Found";
+        } else {
+          complianceBadge.className = "status-pill connected";
+          complianceBadge.innerText = "Verified";
+        }
+      }
       document.getElementById("art-hook").innerText = data.artifact.hook || data.artifact.title;
       document.getElementById("art-cta").innerText = data.artifact.call_to_action || "Download";
       document.getElementById("art-recommendation").innerText = data.experiment.recommended_action
@@ -377,10 +387,10 @@ function updateIntegrationBadges(integrations) {
 
   refreshYouTubeStatus();
   refreshInstagramStatus(ig);
-  if (integrations.lumiclip) {
-    checkLumiClip(integrations.lumiclip);
+  if (integrations.openshorts) {
+    checkClipper(integrations.openshorts);
   } else {
-    checkLumiClip();
+    checkClipper();
   }
 }
 
@@ -1082,43 +1092,35 @@ async function checkInstagram() {
   }
 }
 
-async function checkLumiClip(cachedData) {
-  const pill = document.getElementById("pill-lumiclip");
-  const desc = document.getElementById("desc-lumiclip");
-  const info = document.getElementById("lumiclip-info");
+async function checkClipper(cachedData) {
+  const pill = document.getElementById("pill-clipper");
+  const desc = document.getElementById("desc-clipper");
+  const info = document.getElementById("clipper-info");
   if (!pill) return;
 
   function renderData(data) {
-    if (data.status === "connected") {
+    const isMcp = data.openshorts_mcp && data.openshorts_mcp.server_running;
+    if (isMcp) {
       pill.className = "status-pill connected";
-      pill.innerText = "Connected";
-      if (desc) desc.innerText = `Plan: ${data.plan || 'Standard'} • ${data.credits_remaining !== null ? data.credits_remaining + ' credits remaining' : 'Active'}`;
+      pill.innerText = "MCP Connected";
+      if (desc) desc.innerText = `Connected to OpenShorts MCP server (${data.openshorts_mcp.endpoint || 'http://127.0.0.1:8000/mcp'})`;
       if (info) {
         info.style.display = "block";
-        info.innerHTML = `<div><strong>Plan:</strong> ${data.plan || 'Standard'} &middot; <strong>Credits:</strong> ${data.credits_remaining !== null ? data.credits_remaining : 'Unlimited'} remaining</div>`;
+        info.innerHTML = `<div><strong>Engine:</strong> OpenShorts MCP (${data.openshorts_mcp.tools_count || 0} tools discovered) &middot; <strong>Local Backup:</strong> Ready</div>`;
       }
-    } else if (data.status === "credits_low") {
-      pill.className = "status-pill warning";
-      pill.innerText = "Credits Low";
-      if (desc) desc.innerText = `Low credits: ${data.credits_remaining} remaining. Top up before long runs.`;
-    } else if (data.status === "credits_exhausted") {
-      pill.className = "status-pill failed";
-      pill.innerText = "Exhausted";
-      if (desc) desc.innerText = "LumiClip credits exhausted. Top up your plan at lumiclip.ai.";
-    } else if (data.status === "token_invalid") {
-      pill.className = "status-pill failed";
-      pill.innerText = "Token Invalid";
-      if (desc) desc.innerText = "LumiClip API key was rejected (HTTP 401). Verify LUMICLIP_API_KEY in .env.";
     } else {
-      pill.className = "status-pill waiting";
-      pill.innerText = "Not Configured";
-      if (desc) desc.innerText = data.message || "Add LUMICLIP_API_KEY to your .env file.";
-      if (info) info.style.display = "none";
+      pill.className = "status-pill connected";
+      pill.innerText = "Local Free Ready";
+      if (desc) desc.innerText = "Local Free Engine (faster-whisper CPU + FFmpeg 9:16 transcode) is active. OpenShorts MCP server is offline.";
+      if (info) {
+        info.style.display = "block";
+        info.innerHTML = `<div><strong>Engine:</strong> Local Free (faster-whisper + FFmpeg) &middot; <strong>MCP Server:</strong> Offline at 127.0.0.1:8000</div>`;
+      }
     }
   }
 
-  if (cachedData && typeof cachedData === "object" && cachedData.status) {
-    renderData(cachedData);
+  if (cachedData && typeof cachedData === "object" && (cachedData.server_running !== undefined || cachedData.openshorts_mcp)) {
+    renderData(cachedData.openshorts_mcp ? cachedData : { openshorts_mcp: cachedData });
     return;
   }
 
@@ -1126,12 +1128,12 @@ async function checkLumiClip(cachedData) {
   pill.innerText = "Checking…";
 
   try {
-    const res = await fetch("/api/lumiclip/usage?refresh=1");
+    const res = await fetch("/api/youtube/clipper/status");
     const data = await res.json();
     renderData(data);
   } catch (err) {
-    pill.className = "status-pill failed";
-    pill.innerText = "Error";
-    if (desc) desc.innerText = "Could not check LumiClip status.";
+    pill.className = "status-pill warning";
+    pill.innerText = "Local Free";
+    if (desc) desc.innerText = "Local Free Clipper available (faster-whisper + FFmpeg).";
   }
 }
