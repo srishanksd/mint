@@ -27,50 +27,107 @@ MINT does not invent numbers. Every displayed business metric has a traceable or
 1. **`Opportunity Scout`** (`agents/opportunity_agent.py`): Dynamically discovers contextual digital product opportunities with market evidence via local Ollama (`llama3.2`) or local deterministic market fixtures.
 2. **`Strategy Agent`** (`agents/strategy_agent.py`): Evaluates unit economics against budget limits and adapts based on historical venture performance.
 3. **`MINT Orchestrator`** (`agents/orchestrator.py`): Manages pipeline execution, recording timestamps, checkpoints, and exception handling.
-4. **`YouTube Clips & OpenShorts Agent`** (`agents/youtube_clips_agent.py`): Orchestrates YouTube channel discovery, OpenShorts MCP tool execution (`http://127.0.0.1:8000/mcp`), and local 9:16 vertical video clipping with `faster-whisper` and FFmpeg.
+4. **`YouTube Clips & OpenShorts Agent`** (`agents/youtube_clips_agent.py`): Orchestrates YouTube channel discovery, OpenShorts MCP tool execution, and local 9:16 vertical video clipping with `faster-whisper` and FFmpeg.
 5. **`Product Builder & Digital Product Engine`** (`agents/product_builder.py`, `services/digital_product_engine.py`): Generates genuine digital product deliverables (PDF ebooks, styled HTML guides, JSON manifests) persisted to the `digital_products` catalog and synchronized with Gumroad.
 6. **`Quality Checker`** (`agents/quality_agent.py`): Deterministically audits regulatory disclosures, claim safety, and deliverable completeness.
-7. **`Publishing Agent`** (`services/social_service.py`): Manages YouTube OAuth 2.0 uploads and Instagram Graph API publishing with Cloudinary public media hosting diagnostics.
+7. **`Social Publishing Engine`** (`services/social_service.py`): Manages YouTube OAuth 2.0 uploads and Instagram Graph API publishing with Cloudinary public media hosting diagnostics.
 8. **`Measurement Agent`** (`agents/measurement_agent.py`): Evaluates funnel metrics strictly using logged traffic events and verified transactions.
 9. **`Finance Agent`** (`agents/finance_agent.py`): Deterministically reconciles gross receipts, merchant fees, refunds, and operational spend. Sandbox test orders are distinctly separated from real P&L.
 10. **`Portfolio Manager`** (`agents/portfolio_manager.py`): Partitions eligible surplus into paper asset classes (Conservative, Balanced, Growth) with exact monetary and percentage reconciliation.
-11. **`Venture Control Assistant MCP Server`** (`services/mint_mcp_server.py`, `services/mcp_agent_client.py`): Native MCP 2.x server exposing operational control tools to AI clients with persistent SQLite audit logs in `mcp_audit_logs`.
+11. **`Context Builder & In-Dashboard Chat`** (`agents/context_builder.py`, `agents/chat_assistant.py`): Feeds live database metrics directly to conversational reasoning with zero hallucinations.
+12. **`Venture Control MCP Server & Clients`** (`services/mint_mcp_server.py`, `services/mcp_agent_client.py`, `services/clipper_mcp_client.py`, `services/local_clipper_service.py`): Native Model Context Protocol (MCP) server exposing operational venture control tools to external AI clients with persistent SQLite audit logs in `mcp_audit_logs`.
 
 ---
 
 ## 3. Canonical Project Structure
 
 ```text
-D:\chronoforge\
-├── app.py                      # Flask application factory and blueprint registration
-├── config.py                   # Central configuration, SQLite paths, and environment settings
-├── database.py                 # SQLite schema with idempotent migrations and helpers
-├── requirements.txt            # Declared application dependencies
-├── run.bat                     # Windows startup script
-├── .env                        # Local configuration file (never committed)
-├── .gitignore                  # Git ignore rules for caches, media, and credentials
-├── client_secret_*.json        # Google OAuth 2.0 client credentials
-├── agents/                     # Agent decision and orchestration modules
-├── services/                   # Business logic, MCP client/server, media engines, social services
-├── routes/                     # Clean Flask route blueprints
-├── templates/                  # Professional minimalist Jinja templates
-├── static/                     # CSS stylesheets and vanilla JavaScript
-├── tests/                      # Automated test suite (test_engines.py)
-├── data/
-│   └── mint.db                 # Primary SQLite database
-└── generated/
+mint/
+├── app.py                             # Flask application factory and blueprint registration
+├── config.py                          # Central configuration, SQLite paths, and environment settings
+├── database.py                        # SQLite schema with idempotent migrations and helpers
+├── requirements.txt                   # Declared application dependencies
+├── run.bat                            # Windows 1-click startup script
+├── PLAN.md                            # Comprehensive milestone implementation plan
+├── README.md                          # Full architectural and setup documentation
+├── .env                               # Local configuration file (git-ignored)
+├── .gitignore                         # Git ignore rules for caches, media, and credentials
+│
+├── agents/                            # Autonomous decision & orchestration engines
+│   ├── chat_assistant.py              # In-dashboard contextual consultation assistant
+│   ├── context_builder.py             # Live state and metrics aggregator for AI context
+│   ├── creator_agent.py               # Generates copy, social hooks, and promotional content
+│   ├── finance_agent.py               # Deterministic unit economics and cash reserve accounting
+│   ├── measurement_agent.py           # Funnel analytics (views, clicks, orders, conversion rates)
+│   ├── opportunity_agent.py           # Market demand and trend analysis
+│   ├── orchestrator.py                # Main workflow coordinator and pipeline state machine
+│   ├── portfolio_manager.py           # 100% reconciled surplus allocation across risk profiles
+│   ├── product_builder.py             # Digital product deliverable generation trigger
+│   ├── quality_agent.py               # Compliance, safety, and regulatory audit engine
+│   ├── strategy_agent.py              # Business model and audience selection
+│   └── youtube_clips_agent.py         # Autonomous channel discovery and viral clipping agent
+│
+├── routes/                            # Modular Flask route blueprints
+│   ├── chat.py                        # In-dashboard AI copilot endpoints
+│   ├── content_studio.py              # Video & social content generation routes
+│   ├── dashboard.py                   # Main overview, venture metrics, and architecture graph
+│   ├── experiments.py                 # Venture experiment creation and execution lifecycle
+│   ├── portfolio.py                   # Paper investment portfolio and surplus breakdown
+│   ├── products.py                    # Digital products catalog, downloads, and Gumroad sync
+│   ├── youtube_auth.py                # Google OAuth 2.0 flow and channel analytics
+│   └── youtube_clips.py               # Viral clips generation, preview, queue, and direct publish
+│
+├── services/                          # Business logic, integration engines, and MCP servers
+│   ├── ai_image_service.py            # Cloudflare Workers AI (FLUX.1 Schnell) image generation
+│   ├── ai_service.py                  # Multi-model LLM abstraction (Ollama, Gemini, Mistral)
+│   ├── cleanup_service.py             # File system and database orphan reconciler
+│   ├── clipper_mcp_client.py          # OpenShorts MCP tool integration client
+│   ├── content_service.py             # Multi-scene video synthesis via FFmpeg + Pillow
+│   ├── digital_product_engine.py      # PDF eBook and interactive HTML guide rendering engine
+│   ├── gumroad_service.py             # Gumroad API v2 commerce integration
+│   ├── instagram_marketing_service.py # Instagram Graph API photo and carousel publisher
+│   ├── local_clipper_service.py       # Local Faster-Whisper + FFmpeg intelligent clip extractor
+│   ├── mcp_agent_client.py            # Client interface for MCP tool invocation
+│   ├── media_hosting_service.py       # Cloudinary HTTPS media hosting for external webhooks
+│   ├── media_service.py               # Core PIL/SVG media generation primitives
+│   ├── mint_mcp_server.py             # Native Model Context Protocol (MCP) server
+│   ├── social_service.py              # Social media publishing and scheduling dispatcher
+│   ├── youtube_clipping_service.py    # YouTube source video downloader and audio extractor
+│   └── youtube_scheduler_service.py   # Twice-daily peak audience publishing scheduler
+│
+├── static/                            # Frontend assets
+│   ├── css/
+│   │   └── dashboard.css              # Neomorphic responsive design system
+│   └── js/
+│       └── dashboard.js               # Reactive client controllers, Chart.js, and polling
+│
+├── templates/                         # Server-rendered Jinja2 UI templates
+│   ├── dashboard.html                 # Main venture operations command center
+│   ├── portfolio.html                 # Paper asset allocation and surplus dashboard
+│   ├── product_detail.html            # Individual product deliverable inspection and preview
+│   ├── products.html                  # Catalog of created digital guides and deliverables
+│   ├── studio.html                    # Creative studio for multi-scene shorts and carousels
+│   └── youtube_clips.html             # Video clipping suite, schedule queue, and player
+│
+├── tests/                             # Automated test suite
+│   └── test_engines.py                # Comprehensive end-to-end engine verification suite
+│
+├── data/                              # SQLite persistence (git-ignored)
+│   └── mint.db                        # Primary relational database
+│
+└── generated/                         # Output artifacts and media deliverables (git-ignored)
     ├── content/
-    │   ├── youtube_clips/      # Canonical location for generated vertical clips
-    │   └── instagram/          # Generated Instagram carousel slides
-    ├── images/                 # AI-generated image assets
-    └── products/               # Digital product deliverables (PDFs, HTML guides)
+    │   ├── youtube_clips/             # Rendered 9:16 vertical short videos
+    │   └── instagram/                 # Generated Instagram carousel slides
+    ├── images/                        # AI-generated marketing illustrations
+    └── products/                      # Compiled PDF eBooks, source Markdown, and HTML
 ```
 
 ---
 
 ## 4. Environment Configuration (`.env`)
 
-MINT uses a single local `.env` configuration file located at the project root.
+MINT reads configuration from a local `.env` file at the repository root:
 
 ```bash
 # Core Application
@@ -78,7 +135,7 @@ PORT=5000
 HOST=127.0.0.1
 FLASK_SECRET_KEY=your_secure_random_key_here
 
-# Local AI Reasoning (Ollama)
+# Local AI Reasoning (Ollama / Gemini / Mistral)
 AI_PROVIDER=ollama
 OLLAMA_ENDPOINT=http://localhost:11434
 OLLAMA_MODEL=llama3.2
@@ -116,35 +173,31 @@ YOUTUBE_REDIRECT_URI=http://127.0.0.1:5000/api/youtube/callback
 ### Prerequisites
 - Python 3.11+
 - FFmpeg installed and accessible in system `PATH` (verify with `ffmpeg -version`)
-- Ollama running locally with `ollama pull llama3.2`
+- Ollama running locally (`ollama pull llama3.2`) or API keys configured in `.env`
 
 ### Installation
 ```powershell
-cd D:\chronoforge
-python -m pip install -r requirements.txt
+pip install -r requirements.txt
 ```
 
 ### Running the Application
 ```powershell
 python app.py
 ```
-Or run via Windows batch file:
-```powershell
-run.bat
-```
-Navigate to **`http://127.0.0.1:5000`** in your browser.
+*Or simply double-click **`run.bat`**.*
+
+Access the dashboard at **`http://127.0.0.1:5000`**.
 
 ---
 
-## 6. Automated Testing
+## 6. Automated Testing & Verification
 
-Run the full automated test suite (100% pass):
+Run the full automated test suite:
 ```powershell
-cd D:\chronoforge
 python -m pytest tests/test_engines.py -v
 ```
 
-To run a dry-run consistency and reference audit on generated files and SQLite records:
+To run a consistency and reference audit on generated files and SQLite records:
 ```powershell
 python -c "from services.cleanup_service import CleanupService; import json; print(json.dumps(CleanupService.get_inventory(), indent=2))"
 ```
