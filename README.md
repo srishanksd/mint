@@ -2,7 +2,8 @@
 *Personal Autonomous Venture Operating System*
 
 MINT discovers online business opportunities, creates digital product deliverables and marketing media, measures authentic results, audits regulatory compliance, calculates net unit economics, and allocates resulting surplus into a simulated paper investment portfolio.
-
+---
+[DEMO Video Link](https://drive.google.com/drive/folders/1qHYv8ox8Sa3aO63r7lh2wxtJEs6se30o?usp=sharing)
 ---
 [![Architecture diagram](https://gitdiagram.com/diagram-badge.svg)](https://gitdiagram.com/srishanksd/mint?utm_source=readme&utm_medium=badge)
 ---
