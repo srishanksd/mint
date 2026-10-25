@@ -404,8 +404,11 @@
                         Excluded from publication
                       </span>
                     {% else %}
-                      <button onclick="publishClipNow({{ c.id }})" id="btnPublishNow{{ c.id }}" class="neo-btn neo-btn-primary" style="flex:1; font-size:15px; padding:7px; background:#4f46e5; color:#ffffff; border-color:#4f46e5; font-weight:600;" title="Directly publish this clip live to YouTube without asking for approval">
-                        ⚡ Direct Publish to YouTube
+                      <button onclick="publishClipNow({{ c.id }})" id="btnPublishNow{{ c.id }}" class="neo-btn neo-btn-primary" style="flex:1.2; font-size:14.5px; padding:7px 10px; background:#4f46e5; color:#ffffff; border-color:#4f46e5; font-weight:600;" title="Directly publish this clip live to YouTube without asking for approval">
+                        ⚡ Direct Publish
+                      </button>
+                      <button onclick="queueClipForPublish({{ c.id }})" class="neo-btn" style="font-size:14px; padding:7px 10px;" title="Queue this clip into the twice-daily automated schedule slot">
+                        📅 Queue
                       </button>
                     {% endif %}
                     {% if c.has_local_file %}
@@ -473,17 +476,21 @@
           </div>
         {% else %}
           <div style="text-align:center; padding:24px; color:var(--text-muted); font-size:15.5px; background:var(--surface-nested); border-radius:6px; margin-bottom:16px;">
-            No posts currently queued in the twice-daily slots. Approve clips in Step 4 above to automatically populate upcoming slots.
+            No posts currently queued in the twice-daily slots. Click <strong>"📅 Queue"</strong> on any clip in Step 4 above, or click <strong>"⚡ Direct Publish"</strong> to publish immediately.
           </div>
         {% endif %}
 
         <!-- Next 2 Configured Slots Preview -->
-        <div style="background:var(--surface-nested); border:1px solid var(--border-subtle); border-radius:6px; padding:12px;">
-          <div style="font-size:15.5px; font-weight:600; color:var(--text-primary); margin-bottom:6px;">Configured Daily Time Slots</div>
-          <div style="display:flex; gap:12px; font-size:15.5px; color:var(--text-muted);">
-            <div>☀️ Morning Peak: <strong>{{ schedule.slot_1_time }}</strong></div>
-            <div>🌆 Evening Peak: <strong>{{ schedule.slot_2_time }}</strong></div>
-            <div>Timezone: <strong>{{ schedule.timezone }}</strong></div>
+        <div style="background:var(--surface-nested); border:1px solid var(--border-subtle); border-radius:8px; padding:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <div style="font-size:16px; font-weight:600; color:var(--text-primary);">Configured Daily Time Slots</div>
+            <button type="button" onclick="openScheduleModal()" class="neo-btn" style="font-size:13.5px; padding:4px 10px;">Configure Settings ⚙️</button>
+          </div>
+          <div style="display:flex; gap:16px; font-size:15px; color:var(--text-secondary); flex-wrap:wrap;">
+            <div>☀️ Morning Peak: <strong style="color:var(--text-primary);">{{ schedule.slot_1_time }}</strong></div>
+            <div>🌆 Evening Peak: <strong style="color:var(--text-primary);">{{ schedule.slot_2_time }}</strong></div>
+            <div>🌐 Timezone: <strong style="color:var(--text-primary);">{{ schedule.timezone }}</strong></div>
+            <div>⚡ Auto-Publish: <strong style="color:var(--text-primary);">{{ 'Enabled' if schedule.auto_publish else 'Manual Review' }}</strong></div>
           </div>
         </div>
       </div>
@@ -492,54 +499,60 @@
 
   <!-- Schedule Settings Modal -->
   <div id="scheduleModal" class="modal-backdrop" style="display:none;">
-    <div class="modal-box" style="max-width:500px;">
-      <h3 style="margin:0 0 12px 0; font-size:17.5px; color:var(--text-primary);">Twice-Daily Publishing Schedule Settings</h3>
-      <p style="font-size:15.5px; color:var(--text-muted); margin-bottom:16px; line-height:1.4;">
-        Configure your two daily publishing times based on your YouTube Studio audience heatmap (<strong>"When your viewers are on YouTube"</strong>).
+    <div class="modal-box" style="max-width:540px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h3 style="margin:0; font-size:19px; font-weight:600; color:var(--text-primary);">Twice-Daily Publishing Schedule Settings</h3>
+        <button type="button" onclick="closeScheduleModal()" class="neo-btn" style="padding:4px 8px; font-size:14px;">✕</button>
+      </div>
+      <p style="font-size:14.5px; color:var(--text-muted); margin-bottom:18px; line-height:1.45;">
+        Configure your 2 daily publishing windows based on your YouTube Studio audience heatmap (<strong>"When your viewers are on YouTube"</strong>).
       </p>
 
       <form id="formScheduleSettings" onsubmit="handleSaveSchedule(event)">
-        <div style="margin-bottom:12px;">
-          <label style="display:block; font-size:15.5px; font-weight:600; margin-bottom:4px;">Enable Daily Automation</label>
-          <label style="display:flex; align-items:center; gap:8px; font-size:16px; cursor:pointer;">
-            <input type="checkbox" id="schedEnabled" {{ 'checked' if schedule.enabled else '' }}>
-            <span>Activate automatic schedule worker</span>
-          </label>
-        </div>
-
-        <div style="margin-bottom:12px;">
-          <label style="display:block; font-size:15.5px; font-weight:600; margin-bottom:4px;">Auto-Publish (Live Upload)</label>
-          <label style="display:flex; align-items:center; gap:8px; font-size:16px; cursor:pointer;">
-            <input type="checkbox" id="schedAutoPublish" {{ 'checked' if schedule.auto_publish else '' }}>
-            <span>Automatically upload approved clips to YouTube when slot arrives</span>
-          </label>
-          <div style="font-size:15px; color:var(--text-muted); margin-top:2px;">
-            Destination: <strong>{{ yt_destination.channel_name or 'Connected YouTube Account' }}</strong>
+        <div style="background:var(--surface-nested); border:1px solid var(--border-subtle); border-radius:8px; padding:14px; margin-bottom:16px;">
+          <div style="margin-bottom:10px;">
+            <label style="display:flex; align-items:center; gap:10px; font-size:15.5px; font-weight:600; color:var(--text-primary); cursor:pointer;">
+              <input type="checkbox" id="schedEnabled" style="width:18px; height:18px; accent-color:var(--accent-teal);" {{ 'checked' if schedule.enabled else '' }}>
+              <span>Activate Twice-Daily Automation</span>
+            </label>
           </div>
-        </div>
 
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
           <div>
-            <label style="display:block; font-size:15.5px; font-weight:600; margin-bottom:4px;">Slot 1 Time</label>
-            <input type="time" id="schedSlot1" value="{{ schedule.slot_1_time }}" required
-                   style="width:100%; border:1px solid var(--border-subtle); border-radius:6px; padding:6px; font-size:15.5px; background:var(--surface-pure); color:var(--text-primary);">
+            <label style="display:flex; align-items:center; gap:10px; font-size:15.5px; font-weight:600; color:var(--text-primary); cursor:pointer;">
+              <input type="checkbox" id="schedAutoPublish" style="width:18px; height:18px; accent-color:var(--accent-teal);" {{ 'checked' if schedule.auto_publish else '' }}>
+              <span>Auto-Publish to YouTube (Zero-Click Mode)</span>
+            </label>
+            <div style="font-size:13.5px; color:var(--text-muted); margin-left:28px; margin-top:3px;">
+              Destination: <strong style="color:var(--text-primary);">{{ yt_destination.channel_name or 'Connected YouTube Account' }}</strong>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:14px; margin-bottom:16px;">
+          <div>
+            <label style="display:block; font-size:14.5px; font-weight:600; margin-bottom:6px; color:var(--text-primary);">Slot 1 (Morning Window)</label>
+            <input type="time" id="schedSlot1" value="{{ schedule.slot_1_time }}" required class="neo-input" style="width:100%;">
           </div>
           <div>
-            <label style="display:block; font-size:15.5px; font-weight:600; margin-bottom:4px;">Slot 2 Time</label>
-            <input type="time" id="schedSlot2" value="{{ schedule.slot_2_time }}" required
-                   style="width:100%; border:1px solid var(--border-subtle); border-radius:6px; padding:6px; font-size:15.5px; background:var(--surface-pure); color:var(--text-primary);">
+            <label style="display:block; font-size:14.5px; font-weight:600; margin-bottom:6px; color:var(--text-primary);">Slot 2 (Evening Window)</label>
+            <input type="time" id="schedSlot2" value="{{ schedule.slot_2_time }}" required class="neo-input" style="width:100%;">
           </div>
         </div>
 
-        <div style="margin-bottom:16px;">
-          <label style="display:block; font-size:15.5px; font-weight:600; margin-bottom:4px;">Timezone</label>
-          <input type="text" id="schedTimezone" value="{{ schedule.timezone or 'Asia/Kolkata' }}" required
-                 style="width:100%; border:1px solid var(--border-subtle); border-radius:6px; padding:6px; font-size:15.5px; background:var(--surface-pure); color:var(--text-primary);">
+        <div style="margin-bottom:20px;">
+          <label style="display:block; font-size:14.5px; font-weight:600; margin-bottom:6px; color:var(--text-primary);">Audience Timezone</label>
+          <input type="text" id="schedTimezone" value="{{ schedule.timezone or 'Asia/Kolkata' }}" required class="neo-input" style="width:100%; margin-bottom:6px;">
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <button type="button" class="neo-btn" style="font-size:12px; padding:3px 8px;" onclick="document.getElementById('schedTimezone').value='Asia/Kolkata'">Asia/Kolkata (IST)</button>
+            <button type="button" class="neo-btn" style="font-size:12px; padding:3px 8px;" onclick="document.getElementById('schedTimezone').value='UTC'">UTC</button>
+            <button type="button" class="neo-btn" style="font-size:12px; padding:3px 8px;" onclick="document.getElementById('schedTimezone').value='America/New_York'">America/New_York (EST)</button>
+            <button type="button" class="neo-btn" style="font-size:12px; padding:3px 8px;" onclick="document.getElementById('schedTimezone').value='Europe/London'">Europe/London (GMT)</button>
+          </div>
         </div>
 
-        <div style="display:flex; justify-content:flex-end; gap:8px;">
-          <button type="button" onclick="closeScheduleModal()" class="neo-btn" style="padding:6px 14px;">Cancel</button>
-          <button type="submit" class="neo-btn neo-btn-primary" style="padding:6px 16px;">Save Schedule</button>
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+          <button type="button" onclick="closeScheduleModal()" class="neo-btn" style="padding:8px 16px;">Cancel</button>
+          <button type="submit" class="neo-btn neo-btn-primary" style="padding:8px 20px;">Save Schedule</button>
         </div>
       </form>
     </div>
@@ -785,6 +798,7 @@
         const res = await fetch(`/api/youtube/clips/${clipId}/approve`, { method: 'POST' });
         const data = await res.json();
         if (data.success) {
+          alert('✓ Clip added to twice-daily publishing schedule queue!');
           location.reload();
         } else {
           alert('Approval error: ' + (data.error || 'Failed'));
@@ -792,6 +806,10 @@
       } catch (err) {
         alert('Request error: ' + err.message);
       }
+    }
+
+    function queueClipForPublish(clipId) {
+      return approveClip(clipId);
     }
 
     async function deleteClip(clipId) {
