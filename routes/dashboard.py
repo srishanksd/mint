@@ -4,7 +4,7 @@ import json
 from database import get_db_connection
 from services.social_service import YouTubeService, InstagramService
 from services.ai_service import AIService
-from services.lumiclip_service import LumiClipService
+from services.clipper_mcp_client import ClipperMCPClient
 import config
 from pathlib import Path
 
@@ -42,7 +42,8 @@ def api_overview():
                 "youtube": YouTubeService.get_status(),
                 "instagram": InstagramService.get_status(),
                 "ai": AIService.get_provider_status(),
-                "lumiclip": LumiClipService.get_status()
+                "openshorts": ClipperMCPClient.get_status(),
+                "local_clipper": {"available": True, "engine": "faster-whisper + FFmpeg"}
             }
         })
 
@@ -80,6 +81,10 @@ def api_overview():
     cur.execute("SELECT * FROM artifacts WHERE experiment_id = ? ORDER BY id DESC LIMIT 1", (exp_id,))
     art_row = cur.fetchone()
     artifact = dict(art_row) if art_row else None
+    if artifact:
+        fp = artifact.get("file_path")
+        artifact["file_exists"] = bool(fp and os.path.exists(fp))
+        artifact["file_status"] = "ready" if artifact["file_exists"] else "missing_asset"
 
     cur.execute("SELECT * FROM quality_checks WHERE experiment_id = ? ORDER BY id DESC LIMIT 1", (exp_id,))
     qc_row = cur.fetchone()
@@ -132,7 +137,8 @@ def api_overview():
             "youtube": YouTubeService.get_status(),
             "instagram": InstagramService.get_status(),
             "ai": AIService.get_provider_status(),
-            "lumiclip": LumiClipService.get_status()
+            "openshorts": ClipperMCPClient.get_status(),
+            "local_clipper": {"available": True, "engine": "faster-whisper + FFmpeg"}
         }
     })
 
@@ -288,3 +294,16 @@ def instagram_status():
     force_refresh = request.args.get("refresh") == "1" or request.args.get("force_refresh") == "1"
     status = InstagramService.get_status(force_refresh=force_refresh)
     return jsonify(status)
+
+
+@dashboard_bp.route("/api/instagram/diagnostic")
+def instagram_diagnostic():
+    """Returns comprehensive 10-point diagnostic check of Instagram readiness."""
+    return jsonify(InstagramService.get_detailed_diagnostics())
+
+
+@dashboard_bp.route("/api/system/audit")
+def system_audit():
+    """Returns dry-run reference audit and consistency inventory across database and disk."""
+    from services.cleanup_service import CleanupService
+    return jsonify(CleanupService.get_inventory())

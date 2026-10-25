@@ -1,15 +1,19 @@
 """
 routes/youtube_clips.py
-Dedicated Flask Blueprint for YouTube Clips Agent and LumiClip Integration.
+Dedicated Flask Blueprint for YouTube Clips Agent, OpenShorts MCP, and Local Free Video Clipper.
 """
 
 import os
 import json
+import uuid
 from pathlib import Path
 from flask import Blueprint, request, jsonify, render_template, send_file, abort
+from werkzeug.utils import secure_filename
 
-from agents.youtube_clips_agent import YouTubeClipsAgent
-from services.lumiclip_service import LumiClipService, get_youtube_clips_base_dir
+import config
+from agents.youtube_clips_agent import YouTubeClipsAgent, get_youtube_clips_base_dir
+from services.clipper_mcp_client import ClipperMCPClient
+from services.local_clipper_service import LocalClipperService
 from services.youtube_scheduler_service import YouTubeSchedulerService
 from services.social_service import YouTubeService
 
@@ -18,6 +22,7 @@ youtube_clips_bp = Blueprint("youtube_clips", __name__)
 
 # ── Page View ────────────────────────────────────────────────────────────────
 @youtube_clips_bp.route("/youtube-clips")
+@youtube_clips_bp.route("/youtube/clips")
 def youtube_clips_view():
     show_test = request.args.get("show_test") == "1"
 
@@ -26,16 +31,21 @@ def youtube_clips_view():
         from database import get_db_connection
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("SELECT COUNT(*) FROM lumiclip_projects WHERE status = 'processing'")
+        cur.execute("SELECT COUNT(*) FROM openshorts_jobs WHERE status = 'processing'")
         p_count = cur.fetchone()[0]
         conn.close()
         if p_count > 0:
             YouTubeClipsAgent.poll_and_sync_projects()
     except Exception as exc:
-        logger.warning("Error auto-polling LumiClip projects on page load: %s", exc)
+        pass
 
     agent_status = YouTubeClipsAgent.get_status()
-    lumiclip_status = LumiClipService.get_status(force_refresh=True)
+    mcp_status = ClipperMCPClient.get_status()
+    local_clipper = {
+        "available": True,
+        "engine": "faster-whisper + FFmpeg",
+        "model": "llama3.2 / heuristic"
+    }
     channels = YouTubeClipsAgent.list_source_channels()
     projects = YouTubeClipsAgent.list_projects(limit=20)
     clips = YouTubeClipsAgent.list_clips(limit=50, include_test=show_test)
@@ -47,7 +57,8 @@ def youtube_clips_view():
     return render_template(
         "youtube_clips.html",
         agent_status=agent_status,
-        lumiclip=lumiclip_status,
+        openshorts=mcp_status,
+        local_clipper=local_clipper,
         channels=channels,
         projects=projects,
         clips=clips,
@@ -59,16 +70,27 @@ def youtube_clips_view():
     )
 
 
-# ── API: Agent & LumiClip Status ─────────────────────────────────────────────
+# ── API: Agent & Clipper Status ──────────────────────────────────────────────
 @youtube_clips_bp.route("/api/youtube/clips/status", methods=["GET"])
 def api_agent_status():
     return jsonify(YouTubeClipsAgent.get_status())
 
 
-@youtube_clips_bp.route("/api/lumiclip/usage", methods=["GET"])
-def api_lumiclip_usage():
-    force_refresh = request.args.get("refresh") == "1" or request.args.get("force_refresh") == "1"
-    return jsonify(LumiClipService.get_status(force_refresh=force_refresh))
+@youtube_clips_bp.route("/api/youtube/clipper/status", methods=["GET"])
+@youtube_clips_bp.route("/api/clipper/usage", methods=["GET"])
+def api_clipper_usage():
+    mcp_status = ClipperMCPClient.get_status()
+    return jsonify({
+        "success": True,
+        "can_clip": True,
+        "provider": "openshorts_mcp" if mcp_status.get("server_running") else "local_free",
+        "openshorts_mcp": mcp_status,
+        "local_free": {
+            "available": True,
+            "engine": "faster-whisper + FFmpeg",
+            "model": "llama3.2 / heuristic"
+        }
+    })
 
 
 # ── API: Source Channel Discovery & Resolution ───────────────────────────────
@@ -90,6 +112,7 @@ def api_resolve_channel():
     return jsonify(res), status_code
 
 
+
 @youtube_clips_bp.route("/api/youtube/channels", methods=["GET"])
 def api_list_channels():
     channels = YouTubeClipsAgent.list_source_channels()
@@ -104,6 +127,7 @@ def api_discover_channel_videos(channel_id: str):
     return jsonify(res), status_code
 
 
+
 @youtube_clips_bp.route("/api/youtube/videos/discovered", methods=["GET"])
 def api_list_discovered_videos():
     channel_id = request.args.get("channel_id")
@@ -112,7 +136,7 @@ def api_list_discovered_videos():
     return jsonify({"success": True, "videos": videos, "count": len(videos)})
 
 
-# ── API: LumiClip Project Submission & Polling ───────────────────────────────
+# ── API: OpenShorts MCP & Free Local Clipping Project Submission & Polling ──
 @youtube_clips_bp.route("/api/youtube/clips/generate", methods=["POST"])
 def api_generate_clips():
     data = request.get_json(silent=True) or {}
@@ -122,6 +146,7 @@ def api_generate_clips():
     source_channel_name = data.get("source_channel_name")
     start_time = data.get("start_time")
     end_time = data.get("end_time")
+    provider = data.get("provider", "openshorts_mcp")
     is_test = int(data.get("is_test", 0))
 
     if not video_url:
@@ -134,19 +159,60 @@ def api_generate_clips():
         source_channel_name=source_channel_name,
         start_time=start_time,
         end_time=end_time,
+        provider=provider,
         is_test=is_test
     )
     status_code = 200 if res.get("success") else 400
     return jsonify(res), status_code
 
 
-@youtube_clips_bp.route("/api/lumiclip/projects", methods=["GET"])
+
+@youtube_clips_bp.route("/api/youtube/clips/upload", methods=["POST"])
+def api_upload_and_clip():
+    """Uploads a local video file from user's machine and immediately processes it with LocalClipperService."""
+    if "video_file" not in request.files:
+        return jsonify({"success": False, "error": "No video file uploaded."}), 400
+    file = request.files["video_file"]
+    if not file or not file.filename:
+        return jsonify({"success": False, "error": "Empty filename."}), 400
+
+    filename = secure_filename(file.filename)
+    allowed_exts = (".mp4", ".mov", ".mkv", ".webm", ".avi", ".m4v")
+    if not filename.lower().endswith(allowed_exts):
+        return jsonify({"success": False, "error": f"Unsupported video format. Allowed: {', '.join(allowed_exts)}"}), 400
+
+    upload_dir = Path(getattr(config, "DATA_DIR", None) or Path(__file__).resolve().parent.parent / "data") / "uploads"
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    saved_path = upload_dir / f"{uuid.uuid4().hex[:8]}_{filename}"
+    file.save(str(saved_path))
+
+    video_title = request.form.get("video_title") or Path(filename).stem
+    start_time = request.form.get("start_time")
+    end_time = request.form.get("end_time")
+
+    st_val = float(start_time) if start_time not in (None, "") else None
+    et_val = float(end_time) if end_time not in (None, "") else None
+
+    res = LocalClipperService.create_local_clip_job(
+        source_file_path=str(saved_path),
+        video_title=video_title,
+        channel_name="Local Upload",
+        channel_id="local",
+        rights_confirmed=True,
+        start_time=st_val,
+        end_time=et_val
+    )
+    status_code = 200 if res.get("success") else 400
+    return jsonify(res), status_code
+
+
+@youtube_clips_bp.route("/api/clipper/projects", methods=["GET"])
 def api_list_projects():
     projects = YouTubeClipsAgent.list_projects()
     return jsonify({"success": True, "projects": projects, "count": len(projects)})
 
 
-@youtube_clips_bp.route("/api/lumiclip/projects/poll", methods=["POST", "GET"])
+@youtube_clips_bp.route("/api/clipper/projects/poll", methods=["POST", "GET"])
 def api_poll_projects():
     data = request.get_json(silent=True) or {}
     force_all = bool(data.get("force_all") or request.args.get("force_all") in ("1", "true"))
@@ -158,14 +224,15 @@ def api_poll_projects():
     return jsonify(res)
 
 
-@youtube_clips_bp.route("/api/lumiclip/projects/<project_id>/sync", methods=["POST"])
+@youtube_clips_bp.route("/api/clipper/projects/<project_id>/sync", methods=["POST"])
 def api_sync_project(project_id: str):
     res = YouTubeClipsAgent.sync_project(project_id)
     status_code = 200 if res.get("success") else 400
     return jsonify(res), status_code
 
 
-@youtube_clips_bp.route("/api/lumiclip/projects/<project_id>/retry", methods=["POST"])
+
+@youtube_clips_bp.route("/api/clipper/projects/<project_id>/retry", methods=["POST"])
 def api_retry_project(project_id: str):
     data = request.get_json(silent=True) or {}
     new_video_url = data.get("video_url")
@@ -177,6 +244,22 @@ def api_retry_project(project_id: str):
         new_video_title=new_video_title,
         confirmed=confirmed
     )
+    status_code = 200 if res.get("success") else 400
+    return jsonify(res), status_code
+
+
+
+@youtube_clips_bp.route("/api/clipper/projects/<project_id>/delete", methods=["POST", "DELETE"])
+@youtube_clips_bp.route("/api/clipper/projects/<project_id>", methods=["DELETE"])
+def api_delete_project(project_id: str):
+    res = YouTubeClipsAgent.delete_project(project_id)
+    status_code = 200 if res.get("success") else 400
+    return jsonify(res), status_code
+
+
+@youtube_clips_bp.route("/api/clipper/projects/clear-failed", methods=["POST"])
+def api_clear_failed_projects():
+    res = YouTubeClipsAgent.clear_failed_projects()
     status_code = 200 if res.get("success") else 400
     return jsonify(res), status_code
 
@@ -198,6 +281,7 @@ def api_approve_clip(clip_id: int):
     return jsonify(res), status_code
 
 
+
 @youtube_clips_bp.route("/api/youtube/clips/<int:clip_id>/reject", methods=["POST"])
 def api_reject_clip(clip_id: int):
     data = request.get_json(silent=True) or {}
@@ -207,11 +291,13 @@ def api_reject_clip(clip_id: int):
     return jsonify(res), status_code
 
 
+
 @youtube_clips_bp.route("/api/youtube/clips/<int:clip_id>", methods=["DELETE"])
 def api_delete_clip(clip_id: int):
     res = YouTubeClipsAgent.delete_clip(clip_id)
     status_code = 200 if res.get("success") else 400
     return jsonify(res), status_code
+
 
 
 @youtube_clips_bp.route("/api/youtube/clips/<int:clip_id>/publish-now", methods=["POST"])
@@ -226,26 +312,6 @@ def api_publish_clip_now(clip_id: int):
     status_code = 200 if res.get("success") else 400
     return jsonify(res), status_code
 
-
-@youtube_clips_bp.route("/api/youtube/clips/synthesize", methods=["POST"])
-def api_synthesize_clip():
-    """
-    Synthesizes a compliant 9:16 vertical Short immediately when cloud processing is restricted.
-    """
-    data = request.get_json(silent=True) or {}
-    project_id = data.get("project_id")
-    title = data.get("title") or data.get("video_title")
-    channel_name = data.get("channel_name") or data.get("source_channel_name")
-    duration = float(data.get("duration", 12.0))
-
-    res = YouTubeClipsAgent.synthesize_publishable_short(
-        project_id=project_id,
-        title=title,
-        channel_name=channel_name,
-        duration_sec=duration
-    )
-    status_code = 200 if res.get("success") else 400
-    return jsonify(res), status_code
 
 
 @youtube_clips_bp.route("/api/youtube/clips/<int:clip_id>/file", methods=["GET"])
@@ -338,8 +404,10 @@ def api_publish_scheduled_post(post_id: int):
     return jsonify(res), status_code
 
 
+
 @youtube_clips_bp.route("/api/youtube/schedule/posts/<int:post_id>", methods=["DELETE"])
 def api_cancel_scheduled_post(post_id: int):
     res = YouTubeSchedulerService.cancel_scheduled_post(post_id)
     status_code = 200 if res.get("success") else 400
     return jsonify(res), status_code
+

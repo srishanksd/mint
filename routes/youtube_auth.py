@@ -483,18 +483,24 @@ def youtube_test():
 def list_generated_videos():
     """List locally generated .mp4 files available for upload."""
     gen_dir = Path(getattr(config, "GENERATED_DIR", None) or Path(__file__).resolve().parent.parent / "generated")
-    video_dir = gen_dir / "videos"
-    if not video_dir.exists():
-        return jsonify({"videos": []})
-
+    search_dirs = [
+        gen_dir / "content" / "youtube_clips",
+        gen_dir / "videos"
+    ]
     videos = []
-    for f in sorted(video_dir.glob("*.mp4"), key=lambda p: p.stat().st_mtime, reverse=True):
-        size_mb = round(f.stat().st_size / (1024 * 1024), 2)
-        videos.append({
-            "filename": f.name,
-            "size_mb":  size_mb,
-            "path":     str(f),
-        })
+    seen = set()
+    for s_dir in search_dirs:
+        if s_dir.exists():
+            for f in sorted(s_dir.rglob("*.mp4"), key=lambda p: p.stat().st_mtime, reverse=True):
+                if f.name in seen:
+                    continue
+                seen.add(f.name)
+                size_mb = round(f.stat().st_size / (1024 * 1024), 2)
+                videos.append({
+                    "filename": f.name,
+                    "size_mb":  size_mb,
+                    "path":     str(f),
+                })
     return jsonify({"videos": videos})
 
 
@@ -525,12 +531,16 @@ def youtube_upload():
         return jsonify({"success": False, "error": "filename is required."}), 400
 
     safe_filename = os.path.basename(filename)
-    gen_dir = Path(getattr(config, "GENERATED_DIR", None) or Path(__file__).resolve().parent.parent / "generated")
-    video_dir = (gen_dir / "videos").resolve()
-    video_path = (video_dir / safe_filename).resolve()
+    gen_dir = Path(getattr(config, "GENERATED_DIR", None) or Path(__file__).resolve().parent.parent / "generated").resolve()
+    
+    candidates = list((gen_dir / "content" / "youtube_clips").rglob(safe_filename))
+    if not candidates and (gen_dir / "videos").exists():
+        candidates = list((gen_dir / "videos").rglob(safe_filename))
 
-    if video_path.parent != video_dir or not video_path.exists():
+    if not candidates or not candidates[0].exists():
         return jsonify({"success": False, "error": f"File not found: {filename}"}), 404
+
+    video_path = candidates[0].resolve()
 
     title       = (body.get("title") or filename)[:100]
     description = (body.get("description") or "")[:5000]
@@ -864,16 +874,19 @@ def youtube_delete_local_video(filename: str):
     """
     safe_name = os.path.basename(filename)
     gen_dir = Path(getattr(config, "GENERATED_DIR", None) or Path(__file__).resolve().parent.parent / "generated").resolve()
-    videos_dir = (gen_dir / "videos").resolve()
-    target_file = (videos_dir / safe_name).resolve()
+    
+    candidates = list((gen_dir / "content" / "youtube_clips").rglob(safe_name))
+    if not candidates and (gen_dir / "videos").exists():
+        candidates = list((gen_dir / "videos").rglob(safe_name))
 
-    try:
-        target_file.relative_to(videos_dir)
-    except ValueError:
-        return jsonify({"error": "Refusing to delete file outside videos directory."}), 403
-
-    if not target_file.exists() or not target_file.is_file():
+    if not candidates or not candidates[0].is_file():
         return jsonify({"error": f"Video '{safe_name}' not found."}), 404
+
+    target_file = candidates[0].resolve()
+    try:
+        target_file.relative_to(gen_dir)
+    except ValueError:
+        return jsonify({"error": "Refusing to delete file outside generated directory."}), 403
 
     # Check references
     conn = get_db_connection()

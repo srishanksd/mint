@@ -328,7 +328,7 @@ def api_update_product_status(product_id):
     if new_status == "published":
         issues = []
         if prod.get("is_test"):
-            issues.append("Automated test records cannot be published to live catalog or storefront.")
+            issues.append("Automated test records cannot be published to live catalog or Gumroad.")
         if len(prod.get("title", "")) < 5:
             issues.append("Title must be at least 5 characters.")
         if len(prod.get("description", "")) < 20:

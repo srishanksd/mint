@@ -50,7 +50,7 @@ def create_and_run():
         ("Content Creator", "Awaiting strategic direction", "Waiting to synthesize copy and render media..."),
         ("Quality Checker", "Awaiting generated artifacts", "Waiting to audit compliance and claims..."),
         ("Publishing Agent", "Awaiting artifact compliance check", "Waiting to verify platform credentials..."),
-        ("Measurement Agent", "Awaiting storefront deployment", "Waiting for authentic traffic events..."),
+        ("Measurement Agent", "Awaiting product deployment", "Waiting for authentic traffic events..."),
         ("Finance Agent", "Awaiting transaction logs", "Waiting to reconcile orders and cash reserves..."),
         ("Portfolio Manager", "Awaiting net cash surplus", "Waiting to balance surplus allocation..."),
     ]
