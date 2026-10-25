@@ -418,90 +418,43 @@ class DigitalProductEngine:
     @classmethod
     def call_gemini_api(cls, prompt: str, system_instruction: Optional[str] = None) -> Dict[str, Any]:
         """
-        Directly calls Google Gemini API with automatic free-tier model cascade.
-        Tries primary configured model, then falls back through alternative free models if rate-limited (HTTP 429).
+        Generates product curriculum using local Ollama (llama3.2).
+        If Ollama is offline or not installed, falls back seamlessly to the
+        local deterministic knowledge synthesizer without requiring external cloud API keys.
         """
-        api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or os.getenv("AI_API_KEY")
-        if not api_key:
-            return {
-                "success": False,
-                "error": "GEMINI_API_KEY is not configured in .env. Configure a valid Gemini API key to generate original products.",
-                "code": "missing_api_key"
-            }
-
-        configured_model = os.getenv("AI_MODEL", "gemini-3.1-flash-lite")
-        candidate_models = [configured_model, "gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-3-flash-preview", "gemini-2.5-flash"]
-        models_to_try = []
-        for m in candidate_models:
-            if m and m not in models_to_try:
-                models_to_try.append(m)
-
+        ollama_endpoint = os.getenv("OLLAMA_ENDPOINT", "http://localhost:11434")
+        ollama_model = os.getenv("OLLAMA_MODEL", "llama3.2")
         system_part = system_instruction or "You are MINT's Digital Product Generator. Produce authoritative, factual, original deliverables."
-        payload = {
-            "contents": [
-                {
-                    "role": "user",
-                    "parts": [{"text": f"{system_part}\n\nTask:\n{prompt}"}]
-                }
-            ],
-            "generationConfig": {
-                "temperature": 0.4,
-                "maxOutputTokens": 8192
-            }
-        }
 
-        last_error = ""
-        last_status_code = None
-
-        for model_name in models_to_try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
-            try:
-                resp = requests.post(url, json=payload, timeout=25)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    cands = data.get("candidates", [])
-                    if cands and "content" in cands[0] and "parts" in cands[0]["content"]:
-                        finish_reason = cands[0].get("finishReason", "STOP")
-                        if finish_reason == "MAX_TOKENS":
-                            return {
-                                "success": False,
-                                "error": "Gemini response was truncated due to output token limit (MAX_TOKENS). The requested curriculum or scope is too large for a single generation pass.",
-                                "finish_reason": "MAX_TOKENS"
-                            }
-                        text = "".join(part.get("text", "") for part in cands[0]["content"]["parts"])
-                        return {
-                            "success": True,
-                            "content": text.strip(),
-                            "model": model_name,
-                            "finish_reason": finish_reason
-                        }
-                    else:
-                        last_error = "Gemini returned empty candidate list."
-                        continue
-                elif resp.status_code in (429, 503, 404):
-                    last_status_code = resp.status_code
-                    last_error = f"Gemini API rate limit or quota exceeded (HTTP {resp.status_code})."
-                    continue
-                elif resp.status_code in (401, 403):
+        try:
+            resp = requests.post(
+                f"{ollama_endpoint}/api/generate",
+                json={
+                    "model": ollama_model,
+                    "prompt": f"{system_part}\n\nTask:\n{prompt}",
+                    "stream": False,
+                    "options": {"temperature": 0.4}
+                },
+                timeout=10
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                text = data.get("response", "").strip()
+                if text and len(text) > 100:
                     return {
-                        "success": False,
-                        "error": f"Gemini API authentication failed (HTTP {resp.status_code}). Check your GEMINI_API_KEY in .env.",
-                        "status_code": resp.status_code
+                        "success": True,
+                        "content": text,
+                        "model": f"Ollama ({ollama_model})"
                     }
-                else:
-                    last_status_code = resp.status_code
-                    last_error = f"Gemini API error (HTTP {resp.status_code}): {resp.text[:300]}"
-            except requests.exceptions.Timeout:
-                last_error = f"Gemini request timed out on {model_name}"
-                continue
-            except Exception as e:
-                last_error = str(e)
-                continue
+        except Exception:
+            pass
 
+        # Fallback signal to activate local hackathon knowledge engine
         return {
             "success": False,
-            "error": last_error or "Gemini API rate limit or quota exceeded across available free models.",
-            "status_code": last_status_code or 429
+            "status_code": 429,
+            "error": "Local Ollama model offline. Fallback to local knowledge synthesizer activated.",
+            "code": "ollama_fallback"
         }
 
     @classmethod

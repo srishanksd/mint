@@ -225,6 +225,10 @@ class YouTubeSchedulerService:
             return {"success": False, "error": f"Clip #{clip_id} not found."}
 
         clip = dict(clip_row)
+        if clip.get("content_classification") == "synthetic_placeholder":
+            conn.close()
+            return {"success": False, "error": f"Clip #{clip_id} is a synthetic placeholder and cannot be scheduled."}
+
         if clip.get("status") not in ("rendered", "approved", "ready_for_review") or not clip.get("output_path"):
             conn.close()
             return {"success": False, "error": f"Clip #{clip_id} is in status '{clip.get('status')}'; only approved clips with a valid media file can be scheduled."}

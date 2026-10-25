@@ -29,21 +29,21 @@ logger = logging.getLogger(__name__)
 
 def get_clips_base_dir() -> Path:
     gen_dir = Path(getattr(config, "GENERATED_DIR", None) or Path(__file__).resolve().parent.parent / "generated")
-    clips_dir = gen_dir / "clips"
+    clips_dir = gen_dir / "content" / "youtube_clips"
     clips_dir.mkdir(parents=True, exist_ok=True)
     return clips_dir
 
 
 def get_source_videos_dir() -> Path:
     gen_dir = Path(getattr(config, "GENERATED_DIR", None) or Path(__file__).resolve().parent.parent / "generated")
-    src_dir = gen_dir / "source_videos"
+    src_dir = gen_dir / "content" / "youtube_clips" / "source_videos"
     src_dir.mkdir(parents=True, exist_ok=True)
     return src_dir
 
 
 def get_videos_dir() -> Path:
     gen_dir = Path(getattr(config, "GENERATED_DIR", None) or Path(__file__).resolve().parent.parent / "generated")
-    v_dir = gen_dir / "videos"
+    v_dir = gen_dir / "content" / "youtube_clips"
     v_dir.mkdir(parents=True, exist_ok=True)
     return v_dir
 
@@ -264,52 +264,21 @@ class YouTubeClippingService:
         clip_id = cur.lastrowid
         conn.commit()
 
-        # Destination path: generated/clips/<clip_id>/clip_<clip_id>.mp4
+        # Destination path: generated/content/youtube_clips/<clip_id>/clip_<clip_id>.mp4
         clip_dir = get_clips_base_dir() / str(clip_id)
         clip_dir.mkdir(parents=True, exist_ok=True)
         out_mp4 = clip_dir / f"clip_{clip_id}.mp4"
 
-        # FFmpeg vertical 9:16 transcode
-        # Scale & pad into 1080x1920 portrait canvas
-        vf_filter = "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black"
-        cmd = [
-            "ffmpeg", "-y",
-            "-ss", str(start_sec),
-            "-to", str(end_sec),
-            "-i", str(src_file),
-            "-vf", vf_filter,
-            "-c:v", "libx264",
-            "-preset", "fast",
-            "-crf", "22",
-            "-c:a", "aac",
-            "-b:a", "128k",
-            "-movflags", "+faststart",
-            str(out_mp4)
-        ]
+        # Delegate vertical 9:16 transcode to authoritative LocalClipperService
+        from services.local_clipper_service import LocalClipperService
+        render_ok = LocalClipperService.render_vertical_clip(
+            input_path=str(src_file),
+            start_sec=start_sec,
+            end_sec=end_sec,
+            output_path=str(out_mp4)
+        )
 
-        logger.info("Executing FFmpeg clip command: %s", " ".join(cmd))
-        try:
-            p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=120)
-            if p.returncode != 0:
-                err_msg = f"FFmpeg failed with code {p.returncode}: {p.stderr[-300:]}"
-                cur.execute("UPDATE youtube_clips SET status = 'failed', error_message = ? WHERE id = ?", (err_msg, clip_id))
-                conn.commit()
-                conn.close()
-                return {"success": False, "error": err_msg}
-        except subprocess.TimeoutExpired:
-            err_msg = "FFmpeg clipping timed out after 120 seconds."
-            cur.execute("UPDATE youtube_clips SET status = 'failed', error_message = ? WHERE id = ?", (err_msg, clip_id))
-            conn.commit()
-            conn.close()
-            return {"success": False, "error": err_msg}
-        except Exception as e:
-            err_msg = f"Failed invoking FFmpeg: {str(e)}"
-            cur.execute("UPDATE youtube_clips SET status = 'failed', error_message = ? WHERE id = ?", (err_msg, clip_id))
-            conn.commit()
-            conn.close()
-            return {"success": False, "error": err_msg}
-
-        if not out_mp4.exists() or out_mp4.stat().st_size == 0:
+        if not render_ok or not out_mp4.exists() or out_mp4.stat().st_size == 0:
             err_msg = "FFmpeg finished but output MP4 file was not generated or is empty."
             cur.execute("UPDATE youtube_clips SET status = 'failed', error_message = ? WHERE id = ?", (err_msg, clip_id))
             conn.commit()

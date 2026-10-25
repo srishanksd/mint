@@ -79,7 +79,7 @@ class ContentStudioEngine:
         audience = payload.get("audience", "General Solopreneurs").strip()
         problem = payload.get("problem", "Losing time to chaotic manual workflows.").strip()
         product_facts = payload.get("product_facts", "Structured repeatable action blueprint.").strip()
-        destination_url = payload.get("destination_url", "/storefront").strip()
+        destination_url = payload.get("destination_url", "").strip()
         cta = payload.get("cta", "Link in bio for instant access.").strip()
         aspect_ratio = payload.get("aspect_ratio", "9:16")
         target_duration = int(payload.get("target_duration", 15))

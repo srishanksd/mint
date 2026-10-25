@@ -524,15 +524,42 @@ class InstagramService:
             err_code = check.get("error_code")
             err_msg = str(check.get("error_message") or "Meta did not provide an error description.")
             err_msg = err_msg.replace(access_token, "[redacted]") if access_token else err_msg
+            from services.media_hosting_service import MediaHostingService
+            hosting = MediaHostingService.get_status()
+
             if err_code == 190:
                 status = "token_invalid"
-                msg = "Instagram access token was rejected or has expired. Generate/refresh the token and check its login flow."
-            elif err_code in (10, 200, 203):
+                msg = "Instagram access token was rejected or has expired. Generate a fresh token in Meta App Dashboard / Graph API Explorer."
+                setup_steps = [
+                    "Regenerate your User / Page Access Token in Graph API Explorer or Meta App Dashboard.",
+                    "Ensure the token has not expired."
+                ]
+            elif err_code == 200:
+                status = "permission_error"
+                msg = "Meta Graph API Error 200: API access blocked or unsupported object request. Your Meta Developer App is in Development Mode or has restricted API access."
+                setup_steps = [
+                    "Root cause: Meta App is in Development Mode or the target account is not assigned to App Roles.",
+                    "Fix 1: In Meta Developer Dashboard (developers.facebook.com), switch App Mode from 'Development' to 'Live'.",
+                    "Fix 2: If keeping Development Mode, go to App Roles -> Roles and add your Facebook User / Instagram account as a Tester or Developer.",
+                    f"Fix 3: Confirm your token has granted scopes: {required_scope}, instagram_basic, pages_show_list.",
+                    "Fix 4: Confirm INSTAGRAM_ACCOUNT_ID is your Instagram Business Account ID and not your personal Facebook User ID.",
+                    f"Media Hosting check: {'Ready (Cloudinary)' if hosting.get('configured') else 'Needs configuration (Cloudinary)'}."
+                ]
+            elif err_code in (10, 203):
                 status = "permission_error"
                 msg = f"Meta denied this request (code {err_code}). Check the selected login flow and granted permissions."
+                setup_steps = [
+                    f"Confirm the account has granted {required_scope}.",
+                    "Check token permissions in Meta Access Token Debugger."
+                ]
             else:
                 status = "connection_error"
                 msg = f"Meta profile check failed: {err_msg}"
+                setup_steps = [
+                    f"Confirm the token was generated for {method}.",
+                    f"Confirm the account has granted {required_scope}.",
+                    "Use Check Connection to retry after changing credentials."
+                ]
             return finish({
                 "configured": True,
                 "status": status,
@@ -542,11 +569,8 @@ class InstagramService:
                 "error_code": err_code,
                 "http_status": check.get("http_status"),
                 "required_publish_scope": required_scope,
-                "setup_required": [
-                    f"Confirm the token was generated for {method}.",
-                    f"Confirm the account has granted {required_scope}.",
-                    "Use Check Connection to retry after changing credentials.",
-                ],
+                "setup_required": setup_steps,
+                "media_hosting": hosting
             })
 
         account_data = check["data"]
@@ -659,6 +683,75 @@ class InstagramService:
             "fetched_at": time.strftime("%Y-%m-%d %H:%M:%S"),
             "note": "Media must be at a publicly accessible HTTPS URL for Meta to fetch it. Local files and localhost URLs cannot be published directly.",
         })
+
+    @classmethod
+    def get_detailed_diagnostics(cls) -> Dict[str, Any]:
+        """
+        Comprehensive 10-point diagnostic check of Instagram API connectivity,
+        Meta App Mode, token validation, account type, and media hosting.
+        """
+        from services.media_hosting_service import MediaHostingService
+
+        hosting_status = MediaHostingService.get_status()
+        status = cls.get_status(force_refresh=True)
+
+        account_id = os.getenv("INSTAGRAM_ACCOUNT_ID", "").strip()
+        access_token = os.getenv("INSTAGRAM_ACCESS_TOKEN", "").strip()
+
+        diag_checks = [
+            {
+                "name": "Environment Credentials",
+                "passed": bool(account_id and access_token),
+                "details": f"INSTAGRAM_ACCOUNT_ID: {'Present' if account_id else 'Missing'}, Token: {'Present' if access_token else 'Missing'}"
+            },
+            {
+                "name": "Login Method",
+                "passed": cls.get_login_method() in ("facebook_login", "instagram_login"),
+                "details": f"Configured as {cls.get_login_method()}"
+            },
+            {
+                "name": "Token Validity",
+                "passed": status.get("status") not in ("not_configured", "token_invalid"),
+                "details": status.get("message", "Token verified")
+            },
+            {
+                "name": "Meta API Reachability",
+                "passed": status.get("status") != "connection_error",
+                "details": f"Target endpoint: {cls.get_graph_base_url()}/{cls.get_api_version()}"
+            },
+            {
+                "name": "Meta App Mode (Code 200 Check)",
+                "passed": status.get("error_code") != 200,
+                "details": "Meta App check passed" if status.get("error_code") != 200 else "Code 200: Meta App in Development Mode or missing App Roles / scopes."
+            },
+            {
+                "name": "Account Professional Status",
+                "passed": status.get("account_verified", False) or status.get("account_type") in ("BUSINESS", "CREATOR"),
+                "details": f"Type: {status.get('account_type', 'Unverified')}"
+            },
+            {
+                "name": "Publishing Scope",
+                "passed": status.get("can_publish", False),
+                "details": f"Scope required: {status.get('required_publish_scope', 'instagram_content_publish')}"
+            },
+            {
+                "name": "Public HTTPS Media Hosting",
+                "passed": hosting_status.get("configured", False),
+                "details": hosting_status.get("message", "")
+            }
+        ]
+
+        return {
+            "success": True,
+            "overall_status": status.get("status"),
+            "can_publish": status.get("can_publish", False),
+            "account_label": status.get("username") or status.get("account_id") or "Instagram Account",
+            "error_code": status.get("error_code"),
+            "error_message": status.get("message"),
+            "actionable_guidance": status.get("setup_required", []),
+            "checks": diag_checks,
+            "media_hosting": hosting_status
+        }
 
     @classmethod
     def publish_media(

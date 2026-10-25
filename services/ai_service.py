@@ -12,46 +12,44 @@ class AIService:
     4. Honest configuration feedback when credentials/models are missing.
     """
 
-    SUPPORTED_PROVIDERS = ["gemini", "mistral", "ollama"]
+    SUPPORTED_PROVIDERS = ["ollama", "local_deterministic"]
 
     @classmethod
     def get_configured_provider(cls) -> str:
-        provider = os.getenv("AI_PROVIDER", "").strip().lower()
-        if provider in cls.SUPPORTED_PROVIDERS:
-            return provider
-        if os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"):
-            return "gemini"
-        if os.getenv("MISTRAL_API_KEY"):
-            return "mistral"
-        return "unconfigured"
+        ollama_endpoint = os.getenv("OLLAMA_ENDPOINT", "http://localhost:11434")
+        try:
+            r = requests.get(f"{ollama_endpoint}/api/tags", timeout=1.0)
+            if r.status_code == 200:
+                return "ollama"
+        except Exception:
+            pass
+        return "local_deterministic"
 
     @classmethod
     def get_provider_status(cls) -> Dict[str, Any]:
-        provider = cls.get_configured_provider()
-        gemini_key = bool(os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or (provider == "gemini" and os.getenv("AI_API_KEY")))
-        mistral_key = bool(os.getenv("MISTRAL_API_KEY") or (provider == "mistral" and os.getenv("AI_API_KEY")))
         ollama_endpoint = os.getenv("OLLAMA_ENDPOINT", "http://localhost:11434")
-
         ollama_active = False
         try:
-            r = requests.get(f"{ollama_endpoint}/api/tags", timeout=1.5)
+            r = requests.get(f"{ollama_endpoint}/api/tags", timeout=1.0)
             if r.status_code == 200:
                 ollama_active = True
         except Exception:
             ollama_active = False
 
+        active_provider = "ollama" if ollama_active else "local_deterministic"
         return {
-            "active_provider": provider,
-            "gemini_ready": gemini_key,
-            "mistral_ready": mistral_key,
+            "active_provider": active_provider,
+            "gemini_ready": False,
+            "mistral_ready": False,
             "ollama_ready": ollama_active,
-            "model": os.getenv("AI_MODEL", "gemini-3.1-flash-lite" if provider == "gemini" else "mistral-small-latest")
+            "model": os.getenv("OLLAMA_MODEL", "llama3.2") if ollama_active else "MINT Local State & MCP Tools"
         }
 
     @classmethod
     def generate_chat(cls, messages: List[Dict[str, str]], context: Optional[Dict[str, Any]] = None, temperature: float = 0.7) -> Dict[str, Any]:
         """
-        Sends conversation to active provider. Returns structured dict with response text or clear honest error.
+        Sends conversation to local Ollama if available, or falls back to
+        state-grounded local deterministic reasoning without external API dependencies.
         """
         provider = cls.get_configured_provider()
         context_str = json.dumps(context, indent=2) if context else "No active experiment context."
@@ -64,19 +62,17 @@ class AIService:
             "Format actions clearly when requested (e.g., REVISE_HOOK: <hook>, SET_BUDGET: <num>, SET_AUDIENCE: <aud>, STOP_RUN)."
         )
 
-        if provider == "gemini":
-            return cls._call_gemini(messages, system_instruction, temperature)
-        elif provider == "mistral":
-            return cls._call_mistral(messages, system_instruction, temperature)
-        elif provider == "ollama":
-            return cls._call_ollama(messages, system_instruction, temperature)
-        else:
-            return {
-                "success": False,
-                "error": "No AI provider configured. Set GEMINI_API_KEY or MISTRAL_API_KEY in your .env file, or launch local Ollama.",
-                "reply": "MINT AI is currently waiting for credentials. Please configure GEMINI_API_KEY, MISTRAL_API_KEY, or local Ollama in your `.env` file to enable real model reasoning.",
-                "provider": "none"
-            }
+        if provider == "ollama":
+            res = cls._call_ollama(messages, system_instruction, temperature)
+            if res.get("success"):
+                return res
+
+        # Local deterministic state-grounded fallback
+        return {
+            "success": True,
+            "reply": "",
+            "provider": "local_deterministic"
+        }
 
     @classmethod
     def _call_gemini(cls, messages: List[Dict[str, str]], system_instruction: str, temperature: float) -> Dict[str, Any]:
