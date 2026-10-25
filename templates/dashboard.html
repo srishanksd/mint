@@ -20,9 +20,7 @@
       <a href="/youtube-clips" class="nav-link">YouTube Clips</a>
       <a href="/studio" class="nav-link">Content Studio</a>
       <a href="/products" class="nav-link">Digital Products</a>
-      <a href="/affiliates" class="nav-link">Affiliate Hub</a>
       <a href="/portfolio" class="nav-link">Portfolio</a>
-      <a href="/storefront" class="nav-link" target="_blank">Storefront ↗</a>
     </div>
     <div style="display: flex; gap: 12px; align-items: center;">
       <button id="theme-toggle-btn" class="theme-toggle-btn" onclick="toggleMINTTheme()" aria-label="Toggle dark mode" aria-pressed="false">
@@ -38,7 +36,6 @@
     </div>
     <div style="display: flex; gap: 12px; align-items: center;">
       <span class="status-pill" id="pill-ai-status">Checking AI...</span>
-      <a href="/storefront" target="_blank" class="neo-btn" style="text-decoration:none;">Sandbox Storefront</a>
       <button class="neo-btn neo-btn-primary" onclick="openStartModal()">Launch Venture Run</button>
     </div>
   </header>
@@ -79,17 +76,17 @@
       <div class="neo-card">
         <div class="card-title">
           <span>Autonomous Agent Architecture</span>
-          <span style="font-size:12px; color:var(--text-muted);">Real-time execution pipeline &middot; Click node to inspect</span>
+          <span style="font-size:15.5px; color:var(--text-muted);">Real-time execution pipeline &middot; Click node to inspect</span>
         </div>
 
         <!-- Live Execution Progression Banner -->
         <div class="execution-banner" id="execution-banner">
           <div class="execution-banner-top">
             <div>
-              <span style="font-weight:600; font-size:13px;" id="exec-run-name">Venture Pipeline</span>
+              <span style="font-weight:600; font-size:16.5px" id="exec-run-name">Venture Pipeline</span>
               <span class="status-pill" id="exec-status-pill" style="margin-left:8px;">Engine Idle</span>
             </div>
-            <div style="font-size:12px; color:var(--text-muted);">
+            <div style="font-size:15.5px; color:var(--text-muted);">
               <span id="exec-stage-label">Stage 0/9</span> &middot;
               <span id="exec-elapsed-time">Elapsed: 0s</span>
             </div>
@@ -97,7 +94,7 @@
           <div class="execution-progress-bar-wrap">
             <div class="execution-progress-bar" id="exec-progress-bar" style="width: 0%;"></div>
           </div>
-          <div style="font-size:11.5px; color:var(--text-muted); display:flex; justify-content:space-between; flex-wrap:wrap; gap:4px;">
+          <div style="font-size:15.5px; color:var(--text-muted); display:flex; justify-content:space-between; flex-wrap:wrap; gap:4px;">
             <span id="exec-current-task">Awaiting venture launch</span>
             <span id="exec-latest-event" style="color:var(--accent-teal);">No active run</span>
           </div>
@@ -370,142 +367,19 @@
         </div>
         <div style="display:flex; gap: 20px;">
           <div style="flex:1;">
-            <p style="font-size:12px; color:var(--text-muted); margin-bottom:4px;">Creative Hook:</p>
-            <p id="art-hook" style="font-weight:600; margin-bottom:14px; font-size:14px; color:var(--accent-navy);"></p>
-            <p style="font-size:12px; color:var(--text-muted); margin-bottom:4px;">Call to Action:</p>
-            <p id="art-cta" style="font-size:13px; margin-bottom:14px; color:var(--accent-teal);"></p>
+            <p style="font-size:15.5px; color:var(--text-muted); margin-bottom:4px;">Creative Hook:</p>
+            <p id="art-hook" style="font-weight:600; margin-bottom:14px; font-size:15.5px; color:var(--accent-navy);"></p>
+            <p style="font-size:15.5px; color:var(--text-muted); margin-bottom:4px;">Call to Action:</p>
+            <p id="art-cta" style="font-size:16.5px; margin-bottom:14px; color:var(--accent-teal);"></p>
             <div style="display:flex; gap:10px; flex-wrap:wrap;">
-              <a id="btn-view-img" href="#" target="_blank" class="neo-btn" style="text-decoration:none; font-size:12px;">View Graphic</a>
-              <a id="btn-view-vid" href="#" target="_blank" class="neo-btn" style="text-decoration:none; font-size:12px;">Play Rendered Video</a>
-              <a id="btn-view-pkg" href="#" target="_blank" class="neo-btn" style="text-decoration:none; font-size:12px;">Open Product Guide</a>
+              <a id="btn-view-img" href="#" target="_blank" class="neo-btn" style="text-decoration:none; font-size:15.5px">View Graphic</a>
+              <a id="btn-view-vid" href="#" target="_blank" class="neo-btn" style="text-decoration:none; font-size:15.5px">Play Rendered Video</a>
+              <a id="btn-view-pkg" href="#" target="_blank" class="neo-btn" style="text-decoration:none; font-size:15.5px">Open Product Guide</a>
             </div>
           </div>
           <div style="flex:1; background:var(--surface-nested); border-radius:10px; padding:16px; border:1px solid var(--border-subtle);">
-            <div style="font-size:12.5px; font-weight:600; margin-bottom:8px; color:var(--text-primary);">Evidence-Based Recommendation:</div>
-            <p id="art-recommendation" style="font-size:13.5px; color:var(--text-primary); line-height:1.5;"></p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Integrations & External Service Health -->
-      <div class="neo-card">
-        <div class="card-title">
-          <span>External Platform Integrations</span>
-          <span style="font-size:12px; color:var(--text-muted);">Official OAuth &amp; Meta Graph Connections</span>
-        </div>
-        <div class="integrations-grid">
-
-          <!-- YouTube OAuth Panel -->
-          <div class="integration-panel">
-            <div class="integration-header">
-              <div style="display:flex; align-items:center; gap:8px;">
-                <span class="platform-icon yt">▶</span>
-                <strong>YouTube Data API v3</strong>
-              </div>
-              <span class="status-pill" id="pill-yt">Checking...</span>
-            </div>
-            <p class="integration-status-text" id="desc-yt">Checking connection status...</p>
-            
-            <!-- Real YouTube Channel Stats -->
-            <div id="yt-channel-info" class="yt-info-card" style="display:none;"></div>
-
-            <!-- MINT Recorded Uploads List -->
-            <div id="yt-uploads-section" class="yt-uploads-section" style="display:none;">
-              <div class="yt-uploads-title">Recorded MINT Uploads (Private):</div>
-              <div id="yt-uploads-list" class="yt-uploads-list"></div>
-            </div>
-
-            <div class="integration-actions">
-              <a href="/auth/youtube" class="neo-btn neo-btn-primary" id="btn-yt-connect" style="font-size:11.5px; text-decoration:none; display:none;">Connect YouTube</a>
-              <button class="neo-btn" id="btn-yt-test" onclick="testYouTube(true)" style="font-size:11.5px; display:none;">Refresh Channel Info</button>
-              <a href="/studio" class="neo-btn" style="font-size:11.5px; text-decoration:none;">Clips &amp; Schedule ↗</a>
-              <button class="neo-btn" id="btn-yt-upload" onclick="openUploadModal()" style="font-size:11.5px; display:none;">Upload Video</button>
-              <button class="neo-btn" id="btn-yt-disconnect" onclick="disconnectYouTube()" style="font-size:11.5px; color:#c0392b; display:none;">Disconnect</button>
-            </div>
-          </div>
-
-          <!-- Instagram Panel -->
-          <div class="integration-panel">
-            <div class="integration-header">
-              <div style="display:flex; align-items:center; gap:8px;">
-                <span class="platform-icon ig">📷</span>
-                <strong>Instagram Meta Graph</strong>
-              </div>
-              <span class="status-pill" id="pill-ig">Checking...</span>
-            </div>
-            <p class="integration-status-text" id="desc-ig">Checking Instagram Creator / Business token.</p>
-            
-            <!-- Instagram Details & Status -->
-            <div id="ig-account-info" class="ig-info-card" style="display:none;"></div>
-
-            <!-- Setup Required Guide -->
-            <div id="ig-setup-guide" class="ig-setup-card" style="display:none;">
-              <div style="font-weight:600; margin-bottom:4px; font-size:11.5px;">Connection diagnostic / next steps</div>
-              <ol style="margin-left:18px; font-size:11px; color:var(--text-muted);">
-                <li>Choose the login flow used to create this token.</li>
-                <li>Use the matching account ID, token and publishing permission.</li>
-                <li>For Instagram Login, use instagram_business_basic and instagram_business_content_publish.</li>
-                <li>For Facebook Login, use the Page-connected Instagram flow and its required permissions.</li>
-                <li>Publishing videos requires a public HTTPS media URL; local files are export-only.</li>
-              </ol>
-            </div>
-
-            <div class="integration-actions">
-              <button class="neo-btn" id="btn-ig-check" onclick="checkInstagram()" style="font-size:11.5px;">Check Connection</button>
-            </div>
-          </div>
-
-          <!-- LumiClip AI Video Clipping Panel -->
-          <div class="integration-panel">
-            <div class="integration-header">
-              <div style="display:flex; align-items:center; gap:8px;">
-                <span class="platform-icon" style="background:#e0e7ff; color:#4f46e5; border-radius:4px; padding:2px 6px; font-size:13px;">✂️</span>
-                <strong>LumiClip AI Clipping Engine</strong>
-              </div>
-              <span class="status-pill" id="pill-lumiclip">Checking...</span>
-            </div>
-            <p class="integration-status-text" id="desc-lumiclip">Checking LumiClip API credentials &amp; credit balance.</p>
-            <div id="lumiclip-info" class="ig-info-card" style="display:none; margin-top:8px; font-size:12px; line-height:1.5;"></div>
-            <div class="integration-actions" style="margin-top:10px;">
-              <a href="/youtube-clips" class="neo-btn neo-btn-primary" style="font-size:11.5px; text-decoration:none;">Open Clips Agent</a>
-              <button class="neo-btn" onclick="checkLumiClip()" style="font-size:11.5px;">Refresh Usage</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- YouTube Upload Modal -->
-      <div class="modal-overlay" id="upload-modal" style="display:none;">
-        <div class="modal-card" style="max-width:520px;">
-          <h3 style="margin-bottom:14px; font-size:17px; font-weight:600;">Upload Generated Video to YouTube</h3>
-          <div style="background:#fff3cd; border:1px solid #ffc107; border-radius:6px; padding:10px; margin-bottom:14px; font-size:12px; color:#856404;">
-            ⚠ Video will be uploaded as <strong>Private</strong>. You must manually change visibility in YouTube Studio.
-          </div>
-          <div style="margin-bottom:12px;">
-            <label style="font-size:12.5px; color:var(--text-muted); font-weight:500;">Select Generated Video</label>
-            <select id="upload-select" class="neo-input" style="width:100%; margin-top:4px;">
-              <option value="">Loading videos...</option>
-            </select>
-          </div>
-          <div style="margin-bottom:12px;">
-            <label style="font-size:12.5px; color:var(--text-muted); font-weight:500;">Title (max 100 chars)</label>
-            <input type="text" id="upload-title" class="neo-input" style="width:100%; margin-top:4px;" maxlength="100" placeholder="Enter video title">
-          </div>
-          <div style="margin-bottom:12px;">
-            <label style="font-size:12.5px; color:var(--text-muted); font-weight:500;">Description</label>
-            <textarea id="upload-desc" class="neo-input" style="width:100%; margin-top:4px; height:70px; resize:vertical;" placeholder="Video description..."></textarea>
-          </div>
-          <div style="margin-bottom:14px;">
-            <label style="font-size:12.5px; color:var(--text-muted); font-weight:500;">Tags (comma-separated)</label>
-            <input type="text" id="upload-tags" class="neo-input" style="width:100%; margin-top:4px;" placeholder="mint, digital, automation">
-          </div>
-          <div id="upload-status" style="font-size:12px; min-height:18px; margin-bottom:12px;"></div>
-          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-            <button type="button" class="neo-btn" onclick="deleteSelectedVideo()" style="color:#ef4444; font-size:12px;">Delete Video</button>
-            <div style="display:flex; gap:10px;">
-              <button class="neo-btn" onclick="document.getElementById('upload-modal').style.display='none'">Cancel</button>
-              <button class="neo-btn neo-btn-primary" onclick="confirmUpload()" id="btn-confirm-upload">Upload as Private</button>
-            </div>
+            <div style="font-size:16px; font-weight:600; margin-bottom:8px; color:var(--text-primary);">Evidence-Based Recommendation:</div>
+            <p id="art-recommendation" style="font-size:15.5px; color:var(--text-primary); line-height:1.5;"></p>
           </div>
         </div>
       </div>
@@ -514,7 +388,7 @@
       <div class="neo-card" id="card-portfolio" style="display:none;">
         <div class="card-title">
           <span>Surplus Portfolio Allocation</span>
-          <span style="font-size:12px; color:var(--text-muted);" id="port-profile-label">Profile: Balanced</span>
+          <span style="font-size:15.5px; color:var(--text-muted);" id="port-profile-label">Profile: Balanced</span>
         </div>
         <div style="display:flex; gap:28px; align-items:center;">
           <div style="width:190px; height:190px;">
@@ -531,7 +405,7 @@
       <div class="neo-card chat-window">
         <div class="card-title">
           <span>Venture Control Assistant</span>
-          <span style="font-size:11px; color:var(--text-muted);" id="chat-engine-label">Real Model</span>
+          <span style="font-size:15px; color:var(--text-muted);" id="chat-engine-label">Real Model</span>
         </div>
         <div class="chat-messages" id="chat-box">
           <div class="chat-bubble bubble-mint">
@@ -548,9 +422,132 @@
       <div class="neo-card">
         <div class="card-title">
           <span>Activity Log</span>
-          <span style="font-size:11px; color:var(--text-muted);">Verified Events</span>
+          <span style="font-size:15px; color:var(--text-muted);">Verified Events</span>
         </div>
         <div class="activity-feed-list" id="activity-feed"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Integrations & External Service Health — Full Width Section -->
+  <div class="neo-card" style="margin-top: 8px;">
+    <div class="card-title">
+      <span>External Platform Integrations</span>
+      <span style="font-size:16.5px; color:var(--text-muted);">Official OAuth &amp; Meta Graph Connections</span>
+    </div>
+    <div class="integrations-grid">
+
+      <!-- YouTube OAuth Panel -->
+      <div class="integration-panel">
+        <div class="integration-header">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span class="platform-icon yt">▶</span>
+            <strong>YouTube Data API v3</strong>
+          </div>
+          <span class="status-pill" id="pill-yt">Checking...</span>
+        </div>
+        <p class="integration-status-text" id="desc-yt">Checking connection status...</p>
+        
+        <!-- Real YouTube Channel Stats -->
+        <div id="yt-channel-info" class="yt-info-card" style="display:none;"></div>
+
+        <!-- MINT Recorded Uploads List -->
+        <div id="yt-uploads-section" class="yt-uploads-section" style="display:none;">
+          <div class="yt-uploads-title">Recorded MINT Uploads (Private):</div>
+          <div id="yt-uploads-list" class="yt-uploads-list"></div>
+        </div>
+
+        <div class="integration-actions">
+          <a href="/auth/youtube" class="neo-btn neo-btn-primary" id="btn-yt-connect" style="font-size:16.5px; text-decoration:none; display:none;">Connect YouTube</a>
+          <button class="neo-btn" id="btn-yt-test" onclick="testYouTube(true)" style="font-size:16.5px; display:none;">Refresh Channel Info</button>
+          <a href="/studio" class="neo-btn" style="font-size:16.5px; text-decoration:none;">Clips &amp; Schedule ↗</a>
+          <button class="neo-btn" id="btn-yt-upload" onclick="openUploadModal()" style="font-size:16.5px; display:none;">Upload Video</button>
+          <button class="neo-btn" id="btn-yt-disconnect" onclick="disconnectYouTube()" style="font-size:16.5px; color:#c0392b; display:none;">Disconnect</button>
+        </div>
+      </div>
+
+      <!-- Instagram Panel -->
+      <div class="integration-panel">
+        <div class="integration-header">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span class="platform-icon ig">📷</span>
+            <strong>Instagram Meta Graph</strong>
+          </div>
+          <span class="status-pill" id="pill-ig">Checking...</span>
+        </div>
+        <p class="integration-status-text" id="desc-ig">Checking Instagram Creator / Business token.</p>
+        
+        <!-- Instagram Details & Status -->
+        <div id="ig-account-info" class="ig-info-card" style="display:none;"></div>
+
+        <!-- Setup Required Guide -->
+        <div id="ig-setup-guide" class="ig-setup-card" style="display:none;">
+          <div style="font-weight:600; margin-bottom:4px; font-size:16.5px">Connection diagnostic / next steps</div>
+          <ol style="margin-left:18px; font-size:16px; color:var(--text-muted);">
+            <li>Choose the login flow used to create this token.</li>
+            <li>Use the matching account ID, token and publishing permission.</li>
+            <li>For Instagram Login, use instagram_business_basic and instagram_business_content_publish.</li>
+            <li>For Facebook Login, use the Page-connected Instagram flow and its required permissions.</li>
+            <li>Publishing videos requires a public HTTPS media URL; local files are export-only.</li>
+          </ol>
+        </div>
+
+        <div class="integration-actions">
+          <button class="neo-btn" id="btn-ig-check" onclick="checkInstagram()" style="font-size:16.5px">Check Connection</button>
+        </div>
+      </div>
+
+      <!-- OpenShorts MCP & Local Video Clipper Panel -->
+      <div class="integration-panel">
+        <div class="integration-header">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span class="platform-icon" style="background:#e0e7ff; color:#4f46e5; border-radius:4px; padding:2px 6px; font-size:16.5px">✂️</span>
+            <strong>OpenShorts MCP &amp; Local Clipper</strong>
+          </div>
+          <span class="status-pill" id="pill-clipper">Checking...</span>
+        </div>
+        <p class="integration-status-text" id="desc-clipper">Checking OpenShorts MCP server connection &amp; local FFmpeg engine.</p>
+        <div id="clipper-info" class="ig-info-card" style="display:none; margin-top:8px; font-size:16.5px; line-height:1.5;"></div>
+        <div class="integration-actions" style="margin-top:10px;">
+          <a href="/youtube-clips" class="neo-btn neo-btn-primary" style="font-size:16.5px; text-decoration:none;">Open Clips Agent</a>
+          <button class="neo-btn" onclick="checkClipper()" style="font-size:16.5px">Refresh Status</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- YouTube Upload Modal -->
+  <div class="modal-overlay" id="upload-modal" style="display:none;">
+    <div class="modal-card" style="max-width:540px;">
+      <h3 style="margin-bottom:14px; font-size:22px; font-weight:600;">Upload Generated Video to YouTube</h3>
+      <div style="background:#fff3cd; border:1px solid #ffc107; border-radius:6px; padding:10px; margin-bottom:14px; font-size:16.5px; color:#856404;">
+        ⚠ Video will be uploaded as <strong>Private</strong>. You must manually change visibility in YouTube Studio.
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:15.5px; color:var(--text-muted); font-weight:500;">Select Generated Video</label>
+        <select id="upload-select" class="neo-input" style="width:100%; margin-top:4px;">
+          <option value="">Loading videos...</option>
+        </select>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:15.5px; color:var(--text-muted); font-weight:500;">Title (max 100 chars)</label>
+        <input type="text" id="upload-title" class="neo-input" style="width:100%; margin-top:4px;" maxlength="100" placeholder="Enter video title">
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:15.5px; color:var(--text-muted); font-weight:500;">Description</label>
+        <textarea id="upload-desc" class="neo-input" style="width:100%; margin-top:4px; height:75px; resize:vertical;" placeholder="Video description..."></textarea>
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="font-size:15.5px; color:var(--text-muted); font-weight:500;">Tags (comma-separated)</label>
+        <input type="text" id="upload-tags" class="neo-input" style="width:100%; margin-top:4px;" placeholder="mint, digital, automation">
+      </div>
+      <div id="upload-status" style="font-size:16.5px; min-height:18px; margin-bottom:12px;"></div>
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+        <button type="button" class="neo-btn" onclick="deleteSelectedVideo()" style="color:#ef4444; font-size:16.5px">Delete Video</button>
+        <div style="display:flex; gap:10px;">
+          <button class="neo-btn" onclick="document.getElementById('upload-modal').style.display='none'">Cancel</button>
+          <button class="neo-btn neo-btn-primary" onclick="confirmUpload()" id="btn-confirm-upload">Upload as Private</button>
+        </div>
       </div>
     </div>
   </div>
@@ -558,17 +555,17 @@
   <!-- Start Modal -->
   <div class="modal-overlay" id="start-modal">
     <div class="modal-card">
-      <h3 style="margin-bottom:14px; font-size:17px; font-weight:600;">Launch Venture Run</h3>
+      <h3 style="margin-bottom:14px; font-size:18.5px; font-weight:600;">Launch Venture Run</h3>
       <div style="margin-bottom:14px;">
-        <label style="font-size:12.5px; color:var(--text-muted); font-weight:500;">Venture Objective</label>
+        <label style="font-size:16px; color:var(--text-muted); font-weight:500;">Venture Objective</label>
         <input type="text" id="input-goal" class="neo-input" style="width:100%; margin-top:4px;" value="Find high-margin digital template for indie makers">
       </div>
       <div style="margin-bottom:14px;">
-        <label style="font-size:12.5px; color:var(--text-muted); font-weight:500;">Budget Limit ($)</label>
+        <label style="font-size:16px; color:var(--text-muted); font-weight:500;">Budget Limit ($)</label>
         <input type="number" id="input-budget" class="neo-input" style="width:100%; margin-top:4px;" value="50.0">
       </div>
       <div style="margin-bottom:20px;">
-        <label style="font-size:12.5px; color:var(--text-muted); font-weight:500;">Reinvestment Portfolio Profile</label>
+        <label style="font-size:16px; color:var(--text-muted); font-weight:500;">Reinvestment Portfolio Profile</label>
         <select id="input-risk" class="neo-input" style="width:100%; margin-top:4px;">
           <option value="conservative">Conservative (Preservation & Treasury Yield)</option>
           <option value="balanced" selected>Balanced (Broad Index Diversification)</option>
@@ -586,27 +583,27 @@
   <div class="modal-overlay" id="inspect-modal">
     <div class="modal-card">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-        <h3 id="inspect-title" style="font-size:17px; font-weight:600;"></h3>
+        <h3 id="inspect-title" style="font-size:18.5px; font-weight:600;"></h3>
         <span class="agent-status-tag" id="inspect-status-tag">Status</span>
       </div>
       <div style="margin-bottom:12px;">
-        <div style="font-size:11.5px; color:var(--text-muted); font-weight:500;">Current Task / Input</div>
-        <div id="inspect-input" style="font-size:12.5px; background:var(--surface-nested); color:var(--text-primary); padding:10px; border-radius:6px; border:1px solid var(--border-subtle); margin-top:2px;"></div>
+        <div style="font-size:15.5px; color:var(--text-muted); font-weight:500;">Current Task / Input</div>
+        <div id="inspect-input" style="font-size:16px; background:var(--surface-nested); color:var(--text-primary); padding:10px; border-radius:6px; border:1px solid var(--border-subtle); margin-top:2px;"></div>
       </div>
       <div style="margin-bottom:12px;">
-        <div style="font-size:11.5px; color:var(--text-muted); font-weight:500;">Output Produced / State</div>
-        <div id="inspect-output" style="font-size:12.5px; background:var(--surface-nested); color:var(--text-primary); padding:10px; border-radius:6px; border:1px solid var(--border-subtle); margin-top:2px;"></div>
+        <div style="font-size:15.5px; color:var(--text-muted); font-weight:500;">Output Produced / State</div>
+        <div id="inspect-output" style="font-size:16px; background:var(--surface-nested); color:var(--text-primary); padding:10px; border-radius:6px; border:1px solid var(--border-subtle); margin-top:2px;"></div>
       </div>
       <div style="margin-bottom:12px;">
-        <div style="font-size:11.5px; color:var(--text-muted); font-weight:500;">Decision Rationale</div>
-        <div id="inspect-reason" style="font-size:12.5px; color:var(--accent-teal); margin-top:2px; line-height:1.4;"></div>
+        <div style="font-size:15.5px; color:var(--text-muted); font-weight:500;">Decision Rationale</div>
+        <div id="inspect-reason" style="font-size:16px; color:var(--accent-teal); margin-top:2px; line-height:1.4;"></div>
       </div>
       <div id="inspect-error-row" style="margin-bottom:14px; display:none;">
-        <div style="font-size:11.5px; color:#c0392b; font-weight:500;">Blocker / Error Warning</div>
-        <div id="inspect-error" style="font-size:12px; background:var(--status-failed-bg); border:1px solid var(--status-failed-border); color:var(--status-failed-text); padding:8px 10px; border-radius:6px; margin-top:2px;"></div>
+        <div style="font-size:15.5px; color:#c0392b; font-weight:500;">Blocker / Error Warning</div>
+        <div id="inspect-error" style="font-size:15.5px; background:var(--status-failed-bg); border:1px solid var(--status-failed-border); color:var(--status-failed-text); padding:8px 10px; border-radius:6px; margin-top:2px;"></div>
       </div>
       <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border-subtle); padding-top:12px; margin-top:10px;">
-        <span style="font-size:11px; color:var(--text-subtle);">Last updated: <span id="inspect-time">—</span></span>
+        <span style="font-size:15px; color:var(--text-subtle);">Last updated: <span id="inspect-time">—</span></span>
         <button class="neo-btn" onclick="document.getElementById('inspect-modal').style.display='none'">Close</button>
       </div>
     </div>

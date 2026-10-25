@@ -13,9 +13,9 @@
   <link rel="stylesheet" href="/static/css/dashboard.css">
   <style>
     .studio-container {
-      max-width: 1400px;
+      max-width: 100%;
       margin: 0 auto;
-      padding: 0 20px 40px;
+      padding: 0 0 40px;
     }
     .mode-tab-bar {
       display: flex;
@@ -28,7 +28,7 @@
     .mode-tab {
       padding: 10px 20px;
       border-radius: 8px;
-      font-size: 13.5px;
+      font-size:15.5px;
       font-weight: 600;
       cursor: pointer;
       border: 1px solid var(--border-subtle);
@@ -63,7 +63,7 @@
     }
     .form-group label {
       display: block;
-      font-size: 12px;
+      font-size:15.5px;
       font-weight: 600;
       color: var(--text-muted);
       margin-bottom: 6px;
@@ -73,7 +73,7 @@
       padding: 9px 12px;
       border: 1px solid var(--border-subtle);
       border-radius: 8px;
-      font-size: 13px;
+      font-size:16.5px;
       background: var(--surface-card);
       color: var(--text-primary);
       box-sizing: border-box;
@@ -135,7 +135,7 @@
       flex-direction: column;
     }
     .status-badge {
-      font-size: 10.5px;
+      font-size:14.5px;
       font-weight: 600;
       padding: 3px 8px;
       border-radius: 4px;
@@ -175,9 +175,7 @@
       <a href="/youtube-clips" class="nav-link">YouTube Clips</a>
       <a href="/studio" class="nav-link active">Content Studio</a>
       <a href="/products" class="nav-link">Digital Products</a>
-      <a href="/affiliates" class="nav-link">Affiliate Hub</a>
       <a href="/portfolio" class="nav-link">Portfolio</a>
-      <a href="/storefront" class="nav-link" target="_blank">Storefront ↗</a>
     </div>
     <div style="display: flex; gap: 12px; align-items: center;">
       <button id="theme-toggle-btn" class="theme-toggle-btn" onclick="toggleMINTTheme()" aria-label="Toggle dark mode">
@@ -189,15 +187,12 @@
   <div class="studio-container">
     <header style="margin-top:20px; margin-bottom:24px; display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
       <div>
-        <h1 class="brand-title" style="font-size:26px;">MINT Content Studio</h1>
-        <p class="brand-subtitle">Cloudflare Workers AI (FLUX.1 Schnell) &middot; Meta Instagram Engine &middot; YouTube Clips &amp; Scheduler</p>
+        <h1 class="brand-title" style="font-size:26px">MINT Content Studio</h1>
+        <p class="brand-subtitle">Meta Instagram Marketing Engine &middot; Cloudflare Workers AI (FLUX.1 Schnell) Image Studio</p>
       </div>
       <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
         <span class="status-pill {% if ig_status.can_publish %}connected{% endif %}">
           Instagram: {{ ig_status.account_label or ig_status.status|capitalize }}
-        </span>
-        <span class="status-pill {% if yt_status.connected %}connected{% endif %}">
-          YouTube: {{ yt_status.channel_name or 'Connected' if yt_status.connected else 'Disconnected' }}
         </span>
         <span class="status-pill {% if media_hosting.configured %}connected{% endif %}">
           Media Hosting: {{ media_hosting.provider_label }}
@@ -205,6 +200,9 @@
         <span class="status-pill {% if ai_image_status.can_generate %}connected{% endif %}">
           Image Model: {{ ai_image_status.model }} (Free Tier)
         </span>
+        <a href="/youtube-clips" class="neo-btn neo-btn-primary" style="text-decoration:none; font-size:14.5px; padding:7px 16px;">
+          🎬 YouTube Clips Agent ↗
+        </a>
       </div>
     </header>
 
@@ -213,13 +211,13 @@
       <!-- Card 1: Instagram Account Connection -->
       <div class="status-mini-card">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-          <strong style="font-size:13px; color:var(--text-primary);">Instagram Account Connection</strong>
-          <button onclick="checkConnection()" class="neo-btn" style="font-size:11px; padding:3px 8px;">Check Connection</button>
+          <strong style="font-size:16.5px; color:var(--text-primary);">Instagram Account Connection</strong>
+          <button onclick="checkConnection()" class="neo-btn" style="font-size:15px; padding:3px 8px;">Check Connection</button>
         </div>
-        <p style="font-size:12.5px; color:var(--text-muted); margin-bottom:8px; line-height:1.5;">
+        <p style="font-size:16px; color:var(--text-muted); margin-bottom:8px; line-height:1.5;">
           {{ ig_status.message }}
         </p>
-        <div style="font-size:11.5px; color:var(--text-secondary); display:flex; gap:14px; flex-wrap:wrap;">
+        <div style="font-size:15.5px; color:var(--text-secondary); display:flex; gap:14px; flex-wrap:wrap;">
           <span>Login Flow: <strong>{{ ig_status.login_method }}</strong></span>
           <span>Account: <strong>{{ ig_status.account_label or 'Unset' }}</strong></span>
           <span>Publish Scope: <strong>{% if ig_status.can_publish %}Granted{% else %}Missing / Unverified{% endif %}</strong></span>
@@ -229,15 +227,15 @@
       <!-- Card 2: Public Media Hosting Readiness -->
       <div class="status-mini-card">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-          <strong style="font-size:13px; color:var(--text-primary);">Public HTTPS Media Hosting</strong>
+          <strong style="font-size:16.5px; color:var(--text-primary);">Public HTTPS Media Hosting</strong>
           <span class="status-badge {% if media_hosting.configured %}badge-published{% else %}badge-review{% endif %}">
             {% if media_hosting.configured %}Ready{% else %}Action Required{% endif %}
           </span>
         </div>
-        <p style="font-size:12.5px; color:var(--text-muted); margin-bottom:8px; line-height:1.5;">
+        <p style="font-size:16px; color:var(--text-muted); margin-bottom:8px; line-height:1.5;">
           {{ media_hosting.message }}
         </p>
-        <div style="font-size:11px; color:var(--text-secondary);">
+        <div style="font-size:15px; color:var(--text-secondary);">
           Meta Graph API cannot fetch files from your local disk. Configure Cloudinary in <code>.env</code> to enable one-click publishing.
         </div>
       </div>
@@ -251,11 +249,8 @@
       <div id="tabModeB" class="mode-tab" onclick="switchMode('modeB')">
         <span>🎨 Mode B: AI Image Generator (Cloudflare FLUX.1)</span>
       </div>
-      <div id="tabModeC" class="mode-tab" onclick="switchMode('modeC')">
-        <span>🎬 Mode C: YouTube Clips &amp; Scheduler</span>
-      </div>
       <div id="tabModeHistory" class="mode-tab" onclick="switchMode('modeHistory')">
-        <span>🗂️ Marketing History &amp; Video Archive</span>
+        <span>🗂️ Marketing History &amp; Live Campaigns</span>
       </div>
     </div>
 
@@ -280,7 +275,7 @@
                 </option>
               {% endfor %}
             </select>
-            <div id="prodReadinessAlert" style="display:none; font-size:11.5px; padding:8px 10px; border-radius:6px; margin-top:6px;"></div>
+            <div id="prodReadinessAlert" style="display:none; font-size:15.5px; padding:8px 10px; border-radius:6px; margin-top:6px;"></div>
           </div>
 
           <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
@@ -357,17 +352,17 @@
           </div>
 
           <div style="display:flex; gap:18px; margin-bottom:18px; flex-wrap:wrap;">
-            <label style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--text-secondary); cursor:pointer;">
+            <label style="display:flex; align-items:center; gap:8px; font-size:16px; color:var(--text-secondary); cursor:pointer;">
               <input type="checkbox" id="mktShowInfo" checked>
               <span>Overlay Product Title &amp; Badge on Visual</span>
             </label>
-            <label style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--text-secondary); cursor:pointer;">
+            <label style="display:flex; align-items:center; gap:8px; font-size:16px; color:var(--text-secondary); cursor:pointer;">
               <input type="checkbox" id="mktIncludeLogo" checked>
               <span>Include MINT Badge</span>
             </label>
           </div>
 
-          <button type="submit" id="btnGenerateMkt" class="neo-btn neo-btn-primary" style="width:100%; padding:11px; font-size:13.5px;">
+          <button type="submit" id="btnGenerateMkt" class="neo-btn neo-btn-primary" style="width:100%; padding:11px; font-size:15.5px">
             Generate Marketing Visuals &amp; Draft
           </button>
         </form>
@@ -381,8 +376,8 @@
 
         <div id="mktPreviewContainer">
           <div style="text-align:center; padding:48px 20px; color:var(--text-muted);">
-            <p style="font-size:14px; color:var(--text-primary); font-weight:500;">No marketing draft generated yet.</p>
-            <p style="font-size:12.5px;">Select a real product on the left and click <strong>Generate Marketing Visuals &amp; Draft</strong>.</p>
+            <p style="font-size:15.5px; color:var(--text-primary); font-weight:500;">No marketing draft generated yet.</p>
+            <p style="font-size:16px">Select a real product on the left and click <strong>Generate Marketing Visuals &amp; Draft</strong>.</p>
           </div>
         </div>
       </div>
@@ -397,7 +392,7 @@
         <div class="card-title" style="margin-bottom:14px;">
           <span>AI Image Generator (Cloudflare FLUX.1 Schnell)</span>
         </div>
-        <p style="font-size:12px; color:var(--text-muted); margin-bottom:14px; line-height:1.5;">
+        <p style="font-size:15.5px; color:var(--text-muted); margin-bottom:14px; line-height:1.5;">
           Uses Cloudflare Workers AI free daily allocation (10,000 neurons/day). Generates high-fidelity visuals without paid credits.
         </p>
 
@@ -437,19 +432,19 @@
             </div>
           </div>
 
-          <button type="submit" id="btnGenerateImage" class="neo-btn neo-btn-primary" style="width:100%; padding:11px; font-size:13.5px;">
+          <button type="submit" id="btnGenerateImage" class="neo-btn neo-btn-primary" style="width:100%; padding:11px; font-size:15.5px">
             Generate Image via Cloudflare AI
           </button>
         </form>
 
-        <div id="imageGenStatus" style="display:none; margin-top:14px; padding:12px; border-radius:8px; font-size:12.5px;"></div>
+        <div id="imageGenStatus" style="display:none; margin-top:14px; padding:12px; border-radius:8px; font-size:16px"></div>
       </div>
 
       <!-- Right: Standalone Image Gallery -->
       <div class="neo-card">
         <div class="card-title">
           <span>Generated AI Images ({{ image_assets|length }})</span>
-          <button class="neo-btn" onclick="location.reload()" style="font-size:11.5px;">Refresh</button>
+          <button class="neo-btn" onclick="location.reload()" style="font-size:15.5px">Refresh</button>
         </div>
 
         {% if image_assets %}
@@ -460,23 +455,23 @@
                   {% if img.file_url %}
                     <img src="{{ img.file_url }}" alt="{{ img.prompt[:50] }}" loading="lazy">
                   {% else %}
-                    <span style="font-size:12px; color:var(--text-muted);">Image unavailable</span>
+                    <span style="font-size:15.5px; color:var(--text-muted);">Image unavailable</span>
                   {% endif %}
                 </div>
                 <div class="gallery-meta">
-                  <div style="font-weight:600; font-size:12.5px; color:var(--text-primary); margin-bottom:4px; line-height:1.4;">
+                  <div style="font-weight:600; font-size:16px; color:var(--text-primary); margin-bottom:4px; line-height:1.4;">
                     {{ img.prompt[:60] }}{% if img.prompt|length > 60 %}...{% endif %}
                   </div>
-                  <div style="font-size:11px; color:var(--text-muted); margin-bottom:8px;">
+                  <div style="font-size:15px; color:var(--text-muted); margin-bottom:8px;">
                     {{ img.aspect_ratio }} &middot; {{ img.model }} &middot; {{ img.created_at[:10] }}
                   </div>
                   <div style="display:flex; flex-direction:column; gap:6px; margin-top:auto;">
                     <div style="display:flex; gap:6px;">
                       {% if img.file_url %}
-                        <a href="{{ img.file_url }}" download="mint_image_{{ img.id }}.jpg" class="neo-btn" style="flex:1; text-align:center; text-decoration:none; font-size:11px; padding:6px;">Download</a>
-                        <button type="button" onclick="openPublishStandaloneImageModal({{ img.id }}, '{{ (img.prompt or '')|replace('\\', '\\\\')|replace('\"', '&quot;')|replace('\'', '\\\'')|truncate(80) }}', '{{ img.file_url }}')" class="neo-btn neo-btn-primary" style="flex:1.4; font-size:11px; padding:6px; background:var(--accent-primary); color:#fff; font-weight:600;">Publish to IG</button>
+                        <a href="{{ img.file_url }}" download="mint_image_{{ img.id }}.jpg" class="neo-btn" style="flex:1; text-align:center; text-decoration:none; font-size:15px; padding:6px;">Download</a>
+                        <button type="button" onclick="openPublishStandaloneImageModal({{ img.id }}, '{{ (img.prompt or '')|replace('\\', '\\\\')|replace('\"', '&quot;')|replace('\'', '\\\'')|truncate(80) }}', '{{ img.file_url }}')" class="neo-btn neo-btn-primary" style="flex:1.4; font-size:15px; padding:6px; background:var(--accent-primary); color:#fff; font-weight:600;">Publish to IG</button>
                       {% endif %}
-                      <button type="button" onclick="deleteImage({{ img.id }})" class="neo-btn" style="color:#ef4444; border-color:rgba(239,68,68,0.3); font-size:11px; padding:6px;">Delete</button>
+                      <button type="button" onclick="deleteImage({{ img.id }})" class="neo-btn" style="color:#ef4444; border-color:rgba(239,68,68,0.3); font-size:15px; padding:6px;">Delete</button>
                     </div>
                   </div>
                 </div>
@@ -485,190 +480,15 @@
           </div>
         {% else %}
           <div style="text-align:center; padding:48px 20px; color:var(--text-muted);">
-            <p style="font-size:14px; color:var(--text-primary); font-weight:500;">No standalone images generated yet.</p>
-            <p style="font-size:12.5px;">Enter a prompt on the left and click <strong>Generate Image via Cloudflare AI</strong>.</p>
+            <p style="font-size:15.5px; color:var(--text-primary); font-weight:500;">No standalone images generated yet.</p>
+            <p style="font-size:16px">Enter a prompt on the left and click <strong>Generate Image via Cloudflare AI</strong>.</p>
           </div>
         {% endif %}
       </div>
     </div>
 
     <!-- ===================================================================== -->
-    <!-- MODE C: YOUTUBE CLIPS & TWICE-DAILY SCHEDULER                         -->
-    <!-- ===================================================================== -->
-    <div id="viewModeC" style="display:none;">
-      <!-- Top: Channel Identity & Rights Warning -->
-      <div class="status-panel-grid" style="margin-bottom:20px;">
-        <!-- Source Channel Resolver -->
-        <div class="status-mini-card">
-          <strong style="font-size:13px; color:var(--text-primary); display:block; margin-bottom:6px;">1. Source Channel Selection</strong>
-          <p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">
-            Identify the source channel using official YouTube Data API. Per YouTube policies, MINT does not download audiovisual content from public URLs; only user-authorized source files are processed.
-          </p>
-          <div style="display:flex; gap:8px;">
-            <input type="text" id="ytSourceQuery" class="form-control" placeholder="Enter channel handle (e.g. @channel) or name..." style="font-size:12.5px;">
-            <button type="button" class="neo-btn neo-btn-primary" onclick="resolveSourceChannel()" style="font-size:12px; white-space:nowrap;">Resolve Channel</button>
-          </div>
-          <div id="resolvedChannelBox" style="display:none; margin-top:10px; padding:10px; background:var(--surface-nested); border-radius:8px; border:1px solid var(--border-subtle); font-size:12px;">
-            <div style="display:flex; gap:10px; align-items:center;">
-              <img id="resChThumb" src="" style="width:36px; height:36px; border-radius:50%; object-fit:cover;">
-              <div>
-                <strong id="resChTitle" style="color:var(--text-primary);"></strong>
-                <span id="resChHandle" style="color:var(--text-muted); margin-left:6px;"></span>
-                <div id="resChSubs" style="font-size:11px; color:var(--text-subtle);"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Destination Channel & Twice-Daily Scheduler Status -->
-        <div class="status-mini-card">
-          <strong style="font-size:13px; color:var(--text-primary); display:block; margin-bottom:6px;">2. Destination &amp; Twice-Daily Schedule</strong>
-          <p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">
-            Destination: <strong>{{ yt_status.channel_name or 'YouTube Disconnected' }}</strong> ({% if yt_status.connected %}OAuth Upload Authorized{% else %}Connect via Dashboard{% endif %}).
-          </p>
-          <div style="font-size:12px; color:var(--text-secondary); margin-bottom:10px; line-height:1.5;">
-            Schedule Status: <strong id="schedStatusText">{% if yt_schedule.enabled %}Active (Twice-Daily){% else %}Paused / Disabled{% endif %}</strong><br>
-            Daily Slots: <strong>{{ yt_schedule.slot_1_time }}</strong> &amp; <strong>{{ yt_schedule.slot_2_time }}</strong> ({{ yt_schedule.timezone }})<br>
-            Timing Source: <em>User configured from YouTube Studio heatmap</em>
-          </div>
-          <div style="display:flex; gap:8px;">
-            <button class="neo-btn" onclick="toggleScheduleModal()" style="font-size:11.5px;">Configure Schedule</button>
-            <button class="neo-btn" onclick="checkAnalyticsStatus()" style="font-size:11.5px;">Check Analytics</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Main Workspace: Clip Creator & Scheduled Posts Queue -->
-      <div class="studio-grid">
-        <!-- Left: Authorized Clipping Studio Form -->
-        <div class="neo-card">
-          <div class="card-title" style="margin-bottom:14px;">
-            <span>Render 9:16 Vertical Clip</span>
-          </div>
-
-          <form id="clipRenderForm" onsubmit="handleRenderClip(event)">
-            <div class="form-group">
-              <label for="clipSourceMedia">Select Authorized Source Video (Local File)</label>
-              <select id="clipSourceMedia" class="form-control" required>
-                <option value="">-- Choose local authorized video --</option>
-                {% for m in source_media %}
-                  <option value="{{ m.full_path }}">
-                    {{ m.filename }} ({{ m.duration_sec }}s, {{ m.size_mb }} MB)
-                  </option>
-                {% endfor %}
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label for="clipTitle">Clip Title (YouTube Shorts)</label>
-              <input type="text" id="clipTitle" class="form-control" placeholder="Punchy vertical clip title..." maxlength="100" required>
-            </div>
-
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
-              <div class="form-group">
-                <label for="clipStartSec">Start Time (Seconds)</label>
-                <input type="number" step="0.5" min="0" id="clipStartSec" class="form-control" value="0.0" required>
-              </div>
-              <div class="form-group">
-                <label for="clipEndSec">End Time (Seconds)</label>
-                <input type="number" step="0.5" min="1" max="180" id="clipEndSec" class="form-control" value="15.0" required>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label for="clipHashtags">Hashtags</label>
-              <input type="text" id="clipHashtags" class="form-control" value="#shorts #digitalventure #automation #mint">
-            </div>
-
-            <div class="form-group">
-              <label style="display:flex; align-items:flex-start; gap:8px; cursor:pointer; font-size:12px; color:var(--text-primary); font-weight:normal;">
-                <input type="checkbox" id="chkRightsConfirmed" required style="margin-top:2px;">
-                <span><strong>Rights Confirmation:</strong> I confirm I own or hold explicit authorization/licensing rights to clip and publish this video content under YouTube Developer Policies.</span>
-              </label>
-            </div>
-
-            <button type="submit" id="btnRenderClip" class="neo-btn neo-btn-primary" style="width:100%; padding:11px; font-size:13.5px;">
-              Render Vertical Clip (FFmpeg 9:16)
-            </button>
-          </form>
-
-          <div id="clipRenderStatus" style="display:none; margin-top:14px; padding:12px; border-radius:8px; font-size:12.5px;"></div>
-        </div>
-
-        <!-- Right: Rendered Clips & Publishing Queue -->
-        <div class="neo-card">
-          <div class="card-title">
-            <span>Rendered Clips &amp; Schedule Queue</span>
-            <button class="neo-btn" onclick="location.reload()" style="font-size:11.5px;">Refresh</button>
-          </div>
-
-          <!-- Section A: Rendered Clips Available for Scheduling -->
-          <h4 style="font-size:13px; font-weight:600; color:var(--text-primary); margin:12px 0 8px;">Rendered Clips Ready to Schedule ({{ yt_clips|length }})</h4>
-          {% if yt_clips %}
-            <div style="display:flex; flex-direction:column; gap:10px; max-height:220px; overflow-y:auto; margin-bottom:18px;">
-              {% for c in yt_clips %}
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:var(--surface-nested); border-radius:8px; border:1px solid var(--border-subtle); font-size:12.5px;" id="clipItem{{ c.id }}">
-                  <div>
-                    <strong>{{ c.clip_title }}</strong> ({{ c.duration_sec }}s)
-                    <div style="font-size:11px; color:var(--text-muted);">{{ c.created_at }} &middot; Status: {{ c.status }}</div>
-                  </div>
-                  <div style="display:flex; gap:6px;">
-                    {% if c.exists %}
-                      <a href="{{ c.file_url }}" target="_blank" class="neo-btn" style="font-size:11px; padding:4px 8px;">Preview</a>
-                    {% endif %}
-                    {% if c.status == 'rendered' %}
-                      <button class="neo-btn neo-btn-primary" onclick="queueClipForPublish({{ c.id }})" style="font-size:11px; padding:4px 8px;">Queue Post</button>
-                    {% endif %}
-                    <button class="neo-btn" onclick="deleteYouTubeClip({{ c.id }})" style="font-size:11px; padding:4px 8px; color:#ef4444;">Delete</button>
-                  </div>
-                </div>
-              {% endfor %}
-            </div>
-          {% else %}
-            <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">No vertical clips rendered yet. Use the form on the left to render a 9:16 clip.</p>
-          {% endif %}
-
-          <!-- Section B: Persistent Scheduled Posts Queue -->
-          <h4 style="font-size:13px; font-weight:600; color:var(--text-primary); margin:12px 0 8px;">Persistent Publishing Queue (Max 2 Posts/Day)</h4>
-          {% if yt_scheduled_posts %}
-            <div style="display:flex; flex-direction:column; gap:10px; max-height:260px; overflow-y:auto;">
-              {% for sp in yt_scheduled_posts %}
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:var(--surface-nested); border-radius:8px; border:1px solid var(--border-subtle); font-size:12.5px;" id="scheduledPostItem{{ sp.id }}">
-                  <div>
-                    <strong>{{ sp.clip_title }}</strong>
-                    <div style="font-size:11px; color:var(--text-muted);">
-                      Scheduled: <strong>{{ sp.scheduled_time }}</strong> &middot; Slot: {{ sp.target_slot }}
-                    </div>
-                    {% if sp.youtube_video_id %}
-                      <div style="font-size:11px; color:#15803d;">
-                        ✓ YouTube ID: <a href="{{ sp.youtube_video_url }}" target="_blank" style="color:#15803d; font-weight:600;">{{ sp.youtube_video_id }} ↗</a>
-                      </div>
-                    {% endif %}
-                    {% if sp.error_message %}
-                      <div style="font-size:11px; color:#ef4444;">{{ sp.error_message }}</div>
-                    {% endif %}
-                  </div>
-                  <div style="display:flex; align-items:center; gap:8px;">
-                    <span class="status-badge {% if sp.status in ('published', 'scheduled_api') %}badge-published{% elif sp.status == 'failed' %}badge-failed{% elif sp.status == 'missed' %}badge-review{% else %}badge-draft{% endif %}">
-                      {{ sp.status|upper }}
-                    </span>
-                    {% if sp.status == 'queued' %}
-                      <button class="neo-btn neo-btn-primary" onclick="publishScheduledPostNow({{ sp.id }})" style="font-size:11px; padding:4px 8px;">Upload (API)</button>
-                      <button class="neo-btn" onclick="cancelScheduledPost({{ sp.id }})" style="font-size:11px; padding:4px 8px; color:#ef4444;">Cancel</button>
-                    {% endif %}
-                  </div>
-                </div>
-              {% endfor %}
-            </div>
-          {% else %}
-            <p style="font-size:12px; color:var(--text-muted);">No clips currently scheduled in the queue.</p>
-          {% endif %}
-        </div>
-      </div>
-    </div>
-
-    <!-- ===================================================================== -->
-    <!-- MARKETING HISTORY & VIDEO ARCHIVE                                     -->
+    <!-- MARKETING HISTORY & LIVE CAMPAIGNS                                     -->
     <!-- ===================================================================== -->
     <div id="viewModeHistory" style="display:none;">
       <!-- Instagram Marketing Posts Gallery -->
@@ -685,7 +505,7 @@
                   {% if post.image_urls and post.image_urls|length > 0 %}
                     <img src="{{ post.image_urls[0] }}" alt="{{ post.title }}" loading="lazy">
                   {% else %}
-                    <span style="font-size:12px; color:var(--text-muted);">No images</span>
+                    <span style="font-size:15.5px; color:var(--text-muted);">No images</span>
                   {% endif %}
                 </div>
                 <div class="gallery-meta">
@@ -693,24 +513,24 @@
                     <span class="status-badge {% if post.status == 'published' %}badge-published{% elif post.status == 'failed' %}badge-failed{% else %}badge-review{% endif %}">
                       {{ post.status|upper }}
                     </span>
-                    <span style="font-size:11px; color:var(--text-muted);">{{ post.post_type|upper }}</span>
+                    <span style="font-size:15px; color:var(--text-muted);">{{ post.post_type|upper }}</span>
                   </div>
-                  <div style="font-weight:600; font-size:13px; color:var(--text-primary); margin-bottom:4px;">
+                  <div style="font-weight:600; font-size:16.5px; color:var(--text-primary); margin-bottom:4px;">
                     {{ post.title }}
                   </div>
-                  <div style="font-size:11.5px; color:var(--text-muted); margin-bottom:10px; line-height:1.4; flex-grow:1;">
+                  <div style="font-size:15.5px; color:var(--text-muted); margin-bottom:10px; line-height:1.4; flex-grow:1;">
                     {{ post.caption[:90] }}...
                   </div>
                   {% if post.media_id %}
-                    <div style="font-size:11px; color:#15803d; margin-bottom:8px;">
+                    <div style="font-size:15px; color:#15803d; margin-bottom:8px;">
                       ✓ Live on Meta (ID: {{ post.media_id }})
                     </div>
                   {% endif %}
                   <div style="display:flex; gap:8px; margin-top:auto;">
                     {% if post.status != 'published' and ig_status.can_publish and media_hosting.configured %}
-                      <button onclick="openPublishModal({{ post.id }}, '{{ post.title|escape }}', '{{ post.post_type }}')" class="neo-btn neo-btn-primary" style="flex:1; font-size:11.5px; padding:6px;">Publish</button>
+                      <button onclick="openPublishModal({{ post.id }}, '{{ post.title|escape }}', '{{ post.post_type }}')" class="neo-btn neo-btn-primary" style="flex:1; font-size:15.5px; padding:6px;">Publish</button>
                     {% endif %}
-                    <button onclick="deleteInstagramPost({{ post.id }})" class="neo-btn" style="color:#ef4444; border-color:rgba(239,68,68,0.3); font-size:11.5px; padding:6px;">Delete</button>
+                    <button onclick="deleteInstagramPost({{ post.id }})" class="neo-btn" style="color:#ef4444; border-color:rgba(239,68,68,0.3); font-size:15.5px; padding:6px;">Delete</button>
                   </div>
                 </div>
               </div>
@@ -718,46 +538,11 @@
           </div>
         {% else %}
           <div style="text-align:center; padding:36px 20px; color:var(--text-muted);">
-            <p style="font-size:13.5px;">No Instagram campaigns created yet.</p>
+            <p style="font-size:15.5px">No Instagram campaigns created yet.</p>
           </div>
         {% endif %}
       </div>
 
-      <!-- Legacy Video Jobs Archive -->
-      <div class="neo-card">
-        <div class="card-title">
-          <span>Legacy Video Production Archive (Deferred Phase)</span>
-        </div>
-        {% if video_jobs %}
-          <div class="gallery-grid">
-            {% for j in video_jobs %}
-              <div class="gallery-card" id="jobCard{{ j.id }}">
-                <div class="gallery-img-wrapper" style="background:#000;">
-                  {% if j.status == 'completed' and j.video_path %}
-                    <video controls style="width:100%; height:100%; object-fit:contain;">
-                      <source src="/api/content/jobs/{{ j.id }}/files/final_short.mp4" type="video/mp4">
-                    </video>
-                  {% else %}
-                    <span style="font-size:12px; color:#94a3b8;">{{ j.status }}</span>
-                  {% endif %}
-                </div>
-                <div class="gallery-meta">
-                  <div style="font-weight:600; font-size:13px; color:var(--text-primary); margin-bottom:4px;">{{ j.title }}</div>
-                  <div style="font-size:11px; color:var(--text-muted); margin-bottom:8px;">Job #{{ j.id }} &middot; {{ j.created_at[:10] }}</div>
-                  <div style="display:flex; gap:8px; margin-top:auto;">
-                    <a href="/api/content/jobs/{{ j.id }}/files/final_short.mp4" download class="neo-btn" style="flex:1; text-align:center; text-decoration:none; font-size:11.5px; padding:6px;">Download MP4</a>
-                    <button onclick="deleteContentJob({{ j.id }})" class="neo-btn" style="color:#ef4444; border-color:rgba(239,68,68,0.3); font-size:11.5px; padding:6px;">Delete</button>
-                  </div>
-                </div>
-              </div>
-            {% endfor %}
-          </div>
-        {% else %}
-          <div style="text-align:center; padding:30px 20px; color:var(--text-muted);">
-            <p style="font-size:13px;">No legacy video assets found.</p>
-          </div>
-        {% endif %}
-      </div>
     </div>
   </div>
 
@@ -765,17 +550,17 @@
   <div id="publishModal" class="modal-backdrop" style="display:none;">
     <div class="modal-box">
       <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
-        <div style="width:36px; height:36px; border-radius:50%; background:#e0e7ff; color:#4f46e5; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:700;">📸</div>
-        <h3 style="margin:0; font-size:16px; color:var(--text-primary);">Explicit Instagram Publishing Approval</h3>
+        <div style="width:36px; height:36px; border-radius:50%; background:#e0e7ff; color:#4f46e5; display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:700;">📸</div>
+        <h3 style="margin:0; font-size:17.5px; color:var(--text-primary);">Explicit Instagram Publishing Approval</h3>
       </div>
-      <p style="font-size:13px; color:var(--text-muted); line-height:1.5; margin-bottom:12px;">
+      <p style="font-size:16.5px; color:var(--text-muted); line-height:1.5; margin-bottom:12px;">
         You are about to publish <strong id="pubPostTitle" style="color:var(--text-primary);"></strong> to connected Instagram account <strong style="color:var(--text-primary);">{{ ig_status.account_label or 'Instagram' }}</strong>.
       </p>
-      <div style="background:var(--surface-nested); border:1px solid var(--border-subtle); border-radius:8px; padding:12px; font-size:12px; margin-bottom:14px; line-height:1.5;">
+      <div style="background:var(--surface-nested); border:1px solid var(--border-subtle); border-radius:8px; padding:12px; font-size:15.5px; margin-bottom:14px; line-height:1.5;">
         <div><strong>Public Hosting:</strong> Media will be uploaded to {{ media_hosting.provider_label }} so Meta servers can fetch it.</div>
         <div style="margin-top:4px;"><strong>Post Type:</strong> <span id="pubPostType">Single</span></div>
       </div>
-      <label style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--text-primary); cursor:pointer; margin-bottom:18px;">
+      <label style="display:flex; align-items:center; gap:8px; font-size:16px; color:var(--text-primary); cursor:pointer; margin-bottom:18px;">
         <input type="checkbox" id="chkConfirmPublish">
         <span>I explicitly authorize MINT to publish this post live to Instagram.</span>
       </label>
@@ -790,86 +575,41 @@
   <div id="publishImageModal" class="modal-backdrop" style="display:none;">
     <div class="modal-box" style="max-width:520px;">
       <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
-        <div style="width:36px; height:36px; border-radius:50%; background:#e0e7ff; color:#4f46e5; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:700;">📸</div>
+        <div style="width:36px; height:36px; border-radius:50%; background:#e0e7ff; color:#4f46e5; display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:700;">📸</div>
         <div>
-          <h3 style="margin:0; font-size:16px; color:var(--text-primary);">Publish Image to Instagram</h3>
-          <span style="font-size:11.5px; color:var(--text-muted);">Asset <span id="pubImgAssetId">#</span> &middot; Cloudflare FLUX.1 Schnell</span>
+          <h3 style="margin:0; font-size:17.5px; color:var(--text-primary);">Publish Image to Instagram</h3>
+          <span style="font-size:15.5px; color:var(--text-muted);">Asset <span id="pubImgAssetId">#</span> &middot; Cloudflare FLUX.1 Schnell</span>
         </div>
       </div>
 
       <div style="display:flex; gap:14px; margin-bottom:14px; background:var(--surface-nested); border:1px solid var(--border-subtle); border-radius:8px; padding:10px; align-items:center;">
         <img id="pubImgThumbnail" src="" alt="Thumbnail" style="width:72px; height:72px; object-fit:cover; border-radius:6px; border:1px solid var(--border-subtle); background:#000;">
-        <div style="font-size:12px; line-height:1.4; color:var(--text-primary); flex:1;">
+        <div style="font-size:15.5px; line-height:1.4; color:var(--text-primary); flex:1;">
           <div style="font-weight:600; margin-bottom:4px;">Prompt:</div>
-          <div id="pubImgPromptPreview" style="color:var(--text-muted); font-size:11.5px; max-height:48px; overflow:hidden; text-overflow:ellipsis;"></div>
+          <div id="pubImgPromptPreview" style="color:var(--text-muted); font-size:15.5px; max-height:48px; overflow:hidden; text-overflow:ellipsis;"></div>
         </div>
       </div>
 
       <div style="margin-bottom:12px;">
-        <label style="display:block; font-size:12px; font-weight:600; margin-bottom:6px; color:var(--text-primary);">Instagram Caption &amp; Hashtags</label>
-        <textarea id="pubImgCaption" rows="3" style="width:100%; border:1px solid var(--border-subtle); border-radius:6px; padding:8px 10px; font-size:12.5px; font-family:inherit; background:var(--surface-card); color:var(--text-primary); box-sizing:border-box; resize:vertical;" placeholder="Enter Instagram post caption and hashtags..."></textarea>
+        <label style="display:block; font-size:15.5px; font-weight:600; margin-bottom:6px; color:var(--text-primary);">Instagram Caption &amp; Hashtags</label>
+        <textarea id="pubImgCaption" rows="3" style="width:100%; border:1px solid var(--border-subtle); border-radius:6px; padding:8px 10px; font-size:16px; font-family:inherit; background:var(--surface-card); color:var(--text-primary); box-sizing:border-box; resize:vertical;" placeholder="Enter Instagram post caption and hashtags..."></textarea>
       </div>
 
-      <div style="background:var(--surface-nested); border:1px solid var(--border-subtle); border-radius:8px; padding:10px 12px; font-size:11.5px; margin-bottom:14px; line-height:1.5;">
+      <div style="background:var(--surface-nested); border:1px solid var(--border-subtle); border-radius:8px; padding:10px 12px; font-size:15.5px; margin-bottom:14px; line-height:1.5;">
         <div><strong>Public Hosting:</strong> Media will be hosted via Cloudinary (Meta Graph API requires public HTTPS).</div>
         <div style="margin-top:3px;"><strong>Destination Account:</strong> <span style="font-weight:600; color:var(--text-primary);">{{ ig_status.account_label or 'Instagram' }}</span> ({{ ig_status.login_method or 'facebook_login' }})</div>
       </div>
 
-      <label style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--text-primary); cursor:pointer; margin-bottom:16px;">
+      <label style="display:flex; align-items:center; gap:8px; font-size:16px; color:var(--text-primary); cursor:pointer; margin-bottom:16px;">
         <input type="checkbox" id="chkConfirmPublishImage" style="width:16px; height:16px; accent-color:#4f46e5;">
         <span>I explicitly authorize MINT to publish this image live to Instagram.</span>
       </label>
 
-      <div id="pubImgStatusBox" style="display:none; padding:10px 12px; border-radius:6px; font-size:12px; margin-bottom:14px; line-height:1.4;"></div>
+      <div id="pubImgStatusBox" style="display:none; padding:10px 12px; border-radius:6px; font-size:15.5px; margin-bottom:14px; line-height:1.4;"></div>
 
       <div style="display:flex; justify-content:flex-end; gap:10px;">
         <button type="button" onclick="closePublishImageModal()" class="neo-btn" style="padding:8px 16px;">Cancel</button>
         <button type="button" id="btnExecutePublishImage" onclick="executePublishStandaloneImage()" class="neo-btn neo-btn-primary" style="padding:8px 18px; background:var(--accent-primary); color:#fff; font-weight:600;">Approve &amp; Publish</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Twice-Daily YouTube Schedule Configuration Modal -->
-  <div id="scheduleConfigModal" class="modal-backdrop" style="display:none;">
-    <div class="modal-box">
-      <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
-        <div style="width:36px; height:36px; border-radius:50%; background:#fef3c7; color:#b45309; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:700;">⏰</div>
-        <h3 style="margin:0; font-size:16px; color:var(--text-primary);">Twice-Daily YouTube Publishing Schedule</h3>
-      </div>
-      <p style="font-size:12.5px; color:var(--text-muted); line-height:1.5; margin-bottom:14px;">
-        Configure your two daily publishing windows based on your YouTube Studio audience heatmap ("When your viewers are on YouTube").
-      </p>
-
-      <div class="form-group">
-        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:600; color:var(--text-primary);">
-          <input type="checkbox" id="schedEnableChk" {% if yt_schedule.enabled %}checked{% endif %}>
-          <span>Enable Twice-Daily Automated Scheduling</span>
-        </label>
-      </div>
-
-      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
-        <div class="form-group">
-          <label for="schedSlot1Input">Slot 1 (Peak Window 1)</label>
-          <input type="time" id="schedSlot1Input" class="form-control" value="{{ yt_schedule.slot_1_time }}">
-        </div>
-        <div class="form-group">
-          <label for="schedSlot2Input">Slot 2 (Peak Window 2)</label>
-          <input type="time" id="schedSlot2Input" class="form-control" value="{{ yt_schedule.slot_2_time }}">
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label for="schedTzInput">Timezone</label>
-        <input type="text" id="schedTzInput" class="form-control" value="{{ yt_schedule.timezone }}">
-      </div>
-
-      <div style="background:var(--surface-nested); border:1px solid var(--border-subtle); border-radius:8px; padding:10px; font-size:11.5px; color:var(--text-muted); margin-bottom:16px; line-height:1.4;">
-        ℹ️ The standard YouTube Analytics API exposes aggregate daily metrics; hourly audience heatmaps are manually configured here from YouTube Studio to maintain honesty and prevent fabricated data.
-      </div>
-
-      <div style="display:flex; justify-content:flex-end; gap:10px;">
-        <button type="button" onclick="toggleScheduleModal()" class="neo-btn" style="padding:8px 16px;">Cancel</button>
-        <button type="button" onclick="saveScheduleConfig()" class="neo-btn neo-btn-primary" style="padding:8px 16px;">Save Schedule</button>
       </div>
     </div>
   </div>
@@ -901,12 +641,10 @@
     function switchMode(mode) {
       document.getElementById('tabModeA').classList.toggle('active', mode === 'modeA');
       document.getElementById('tabModeB').classList.toggle('active', mode === 'modeB');
-      if (document.getElementById('tabModeC')) document.getElementById('tabModeC').classList.toggle('active', mode === 'modeC');
       document.getElementById('tabModeHistory').classList.toggle('active', mode === 'modeHistory');
 
       document.getElementById('viewModeA').style.display = mode === 'modeA' ? 'grid' : 'none';
       document.getElementById('viewModeB').style.display = mode === 'modeB' ? 'grid' : 'none';
-      if (document.getElementById('viewModeC')) document.getElementById('viewModeC').style.display = mode === 'modeC' ? 'block' : 'none';
       document.getElementById('viewModeHistory').style.display = mode === 'modeHistory' ? 'block' : 'none';
     }
 
@@ -995,7 +733,7 @@
           data.image_urls.map((url, idx) => `
             <div style="flex-shrink:0; width:180px; height:180px; border-radius:8px; overflow:hidden; border:1px solid var(--border-subtle); position:relative;">
               <img src="${url}" style="width:100%; height:100%; object-fit:cover;">
-              <span style="position:absolute; bottom:6px; right:6px; background:rgba(0,0,0,0.6); color:#fff; font-size:10px; padding:2px 6px; border-radius:4px;">Slide ${idx+1}</span>
+              <span style="position:absolute; bottom:6px; right:6px; background:rgba(0,0,0,0.6); color:#fff; font-size:14px; padding:2px 6px; border-radius:4px;">Slide ${idx+1}</span>
             </div>
           `).join('') + `</div>`;
       }
@@ -1003,14 +741,14 @@
       let blockerHtml = '';
       if (!canHost) {
         blockerHtml = `
-          <div style="background:#fef3c7; border:1px solid #fde68a; border-radius:8px; padding:12px; margin-top:14px; font-size:12.5px; color:#b45309;">
+          <div style="background:#fef3c7; border:1px solid #fde68a; border-radius:8px; padding:12px; margin-top:14px; font-size:16px; color:#b45309;">
             <strong>Media Hosting Required:</strong> Public HTTPS hosting is not configured. Local files cannot be fetched by Meta.
-            <div style="margin-top:4px; font-size:11.5px;">Download generated visuals locally, or set <code>CLOUDINARY_CLOUD_NAME</code> in <code>.env</code> to enable live publishing.</div>
+            <div style="margin-top:4px; font-size:15.5px">Download generated visuals locally, or set <code>CLOUDINARY_CLOUD_NAME</code> in <code>.env</code> to enable live publishing.</div>
           </div>
         `;
       } else if (!canPublish) {
         blockerHtml = `
-          <div style="background:#fef3c7; border:1px solid #fde68a; border-radius:8px; padding:12px; margin-top:14px; font-size:12.5px; color:#b45309;">
+          <div style="background:#fef3c7; border:1px solid #fde68a; border-radius:8px; padding:12px; margin-top:14px; font-size:16px; color:#b45309;">
             <strong>Instagram Not Ready:</strong> {{ ig_status.message }}
           </div>
         `;
@@ -1022,17 +760,17 @@
         <div style="background:var(--surface-nested); border:1px solid var(--border-subtle); border-radius:10px; padding:16px;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
             <span class="status-badge badge-review">${data.post_type.toUpperCase()} DRAFT</span>
-            <span style="font-size:12px; color:var(--text-muted);">${data.slide_count} visual(s) generated</span>
+            <span style="font-size:15.5px; color:var(--text-muted);">${data.slide_count} visual(s) generated</span>
           </div>
 
           ${imagesHtml}
 
           <div style="background:var(--surface-card); border:1px solid var(--border-subtle); border-radius:8px; padding:12px; margin-bottom:14px;">
-            <div style="font-size:11.5px; font-weight:600; color:var(--text-muted); margin-bottom:4px;">PREPARED CAPTION &amp; HASHTAGS:</div>
-            <pre style="white-space:pre-wrap; font-family:inherit; font-size:12.5px; color:var(--text-primary); margin:0; line-height:1.5;">${data.caption}</pre>
+            <div style="font-size:15.5px; font-weight:600; color:var(--text-muted); margin-bottom:4px;">PREPARED CAPTION &amp; HASHTAGS:</div>
+            <pre style="white-space:pre-wrap; font-family:inherit; font-size:16px; color:var(--text-primary); margin:0; line-height:1.5;">${data.caption}</pre>
           </div>
 
-          ${data.readiness_warning ? `<div style="font-size:11.5px; color:#b45309; margin-bottom:10px;">⚠️ ${data.readiness_warning}</div>` : ''}
+          ${data.readiness_warning ? `<div style="font-size:15.5px; color:#b45309; margin-bottom:10px;">⚠️ ${data.readiness_warning}</div>` : ''}
 
           ${blockerHtml}
 
@@ -1209,251 +947,6 @@
         statusBox.innerText = 'Request failed: ' + err.message;
         btn.disabled = false;
         btn.innerText = 'Approve & Publish';
-      }
-    }
-
-    async function resolveSourceChannel() {
-      const q = document.getElementById('ytSourceQuery').value.trim();
-      if (!q) {
-        alert('Please enter a channel name or handle (@channel).');
-        return;
-      }
-      try {
-        const res = await fetch(`/api/youtube/channels/resolve?query=${encodeURIComponent(q)}`);
-        const data = await res.json();
-        const box = document.getElementById('resolvedChannelBox');
-        if (data.success) {
-          box.style.display = 'block';
-          document.getElementById('resChThumb').src = data.thumbnail_url || '';
-          document.getElementById('resChTitle').innerText = data.title || 'Channel';
-          document.getElementById('resChHandle').innerText = data.handle || '';
-          document.getElementById('resChSubs').innerText = `${data.subscriber_count} subscribers • ${data.video_count} videos`;
-        } else {
-          box.style.display = 'none';
-          alert('Channel lookup error: ' + (data.error || 'Channel not found.'));
-        }
-      } catch (err) {
-        alert('Request failed: ' + err.message);
-      }
-    }
-
-    async function handleRenderClip(e) {
-      e.preventDefault();
-      const src = document.getElementById('clipSourceMedia').value;
-      const title = document.getElementById('clipTitle').value.trim();
-      const startSec = parseFloat(document.getElementById('clipStartSec').value);
-      const endSec = parseFloat(document.getElementById('clipEndSec').value);
-      const hashtags = document.getElementById('clipHashtags').value.trim();
-      const rightsConfirmed = document.getElementById('chkRightsConfirmed').checked;
-      const statusBox = document.getElementById('clipRenderStatus');
-      const btn = document.getElementById('btnRenderClip');
-
-      if (!rightsConfirmed) {
-        alert('You must confirm ownership or authorized reuse rights before rendering a clip.');
-        return;
-      }
-
-      btn.disabled = true;
-      btn.innerText = 'Rendering 9:16 Clip via FFmpeg...';
-      statusBox.style.display = 'block';
-      statusBox.style.background = '#e0e7ff';
-      statusBox.style.color = '#3730a3';
-      statusBox.innerText = 'Running FFmpeg transcode & padding to 1080x1920 portrait format...';
-
-      try {
-        const res = await fetch('/api/youtube/clips/render', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            source_path: src,
-            clip_title: title,
-            start_sec: startSec,
-            end_sec: endSec,
-            hashtags: hashtags,
-            rights_confirmed: true,
-            aspect_ratio: '9:16'
-          })
-        });
-        const data = await res.json();
-        if (data.success) {
-          statusBox.style.background = '#dcfce7';
-          statusBox.style.color = '#15803d';
-          statusBox.innerHTML = `✓ Clip rendered successfully (${data.duration_sec}s)! <a href="${data.file_url}" target="_blank" style="color:#15803d; font-weight:600;">Preview Clip ↗</a>`;
-          location.reload();
-        } else {
-          statusBox.style.background = '#fee2e2';
-          statusBox.style.color = '#b91c1c';
-          statusBox.innerText = 'Error: ' + (data.error || 'FFmpeg rendering failed.');
-        }
-      } catch (err) {
-        statusBox.style.background = '#fee2e2';
-        statusBox.style.color = '#b91c1c';
-        statusBox.innerText = 'Network error: ' + err.message;
-      } finally {
-        btn.disabled = false;
-        btn.innerText = 'Render Vertical Clip (FFmpeg 9:16)';
-      }
-    }
-
-    async function queueClipForPublish(clipId) {
-      if (!confirm(`Queue Clip #${clipId} for the next scheduled publication slot?`)) return;
-      try {
-        const res = await fetch('/api/youtube/schedule/queue', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ clip_id: clipId })
-        });
-        const data = await res.json();
-        if (data.success) {
-          alert('Success: ' + data.message);
-          location.reload();
-        } else {
-          alert('Queue error: ' + (data.error || 'Failed to queue clip.'));
-        }
-      } catch (err) {
-        alert('Request failed: ' + err.message);
-      }
-    }
-
-    async function deleteYouTubeClip(clipId) {
-      if (!confirm(`Delete rendered clip #${clipId}?`)) return;
-      try {
-        const res = await fetch(`/api/youtube/clips/${clipId}`, { method: 'DELETE' });
-        const data = await res.json();
-        if (data.success) {
-          document.getElementById('clipItem' + clipId)?.remove();
-        } else {
-          alert('Delete failed: ' + (data.error || 'Unknown error'));
-        }
-      } catch (err) {
-        alert('Request failed: ' + err.message);
-      }
-    }
-
-    async function publishScheduledPostNow(postId) {
-      if (!confirm(`Upload scheduled post #${postId} to YouTube via official Data API with publishAt future release?`)) return;
-      try {
-        const res = await fetch(`/api/youtube/schedule/posts/${postId}/publish`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ confirmed: true })
-        });
-        const data = await res.json();
-        if (data.success) {
-          alert('Uploaded to YouTube! ' + data.message);
-          location.reload();
-        } else {
-          alert('Upload failed: ' + (data.error || 'Error'));
-        }
-      } catch (err) {
-        alert('Request failed: ' + err.message);
-      }
-    }
-
-    async function cancelScheduledPost(postId) {
-      if (!confirm(`Cancel scheduled post #${postId}?`)) return;
-      try {
-        const res = await fetch(`/api/youtube/schedule/posts/${postId}/cancel`, { method: 'POST' });
-        const data = await res.json();
-        if (data.success) {
-          alert('Cancelled.');
-          location.reload();
-        } else {
-          alert('Cancel failed: ' + (data.error || 'Error'));
-        }
-      } catch (err) {
-        alert('Request failed: ' + err.message);
-      }
-    }
-
-    function toggleScheduleModal() {
-      const modal = document.getElementById('scheduleConfigModal');
-      modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
-    }
-
-    async function saveScheduleConfig() {
-      const enabled = document.getElementById('schedEnableChk').checked;
-      const tz = document.getElementById('schedTzInput').value.trim() || 'UTC';
-      const slot1 = document.getElementById('schedSlot1Input').value.trim() || '10:00';
-      const slot2 = document.getElementById('schedSlot2Input').value.trim() || '18:00';
-
-      try {
-        const res = await fetch('/api/youtube/schedule', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            enabled: enabled,
-            timezone: tz,
-            slot_1_time: slot1,
-            slot_2_time: slot2
-          })
-        });
-        const data = await res.json();
-        if (data.success) {
-          alert('Schedule configuration updated.');
-          toggleScheduleModal();
-          location.reload();
-        } else {
-          alert('Update failed: ' + (data.error || 'Error'));
-        }
-      } catch (err) {
-        alert('Request failed: ' + err.message);
-      }
-    }
-
-    async function checkAnalyticsStatus() {
-      try {
-        const res = await fetch('/api/youtube/analytics/audience');
-        const data = await res.json();
-        alert(`YouTube Analytics Status:\n\n${data.message}`);
-      } catch (err) {
-        alert('Analytics check failed: ' + err.message);
-      }
-    }
-
-    async function deleteInstagramPost(id) {
-      if (!confirm(`Delete local Instagram post record #${id}?`)) return;
-      try {
-        const res = await fetch(`/api/instagram/content/${id}`, { method: 'DELETE' });
-        const data = await res.json();
-        if (data.success) {
-          if (data.warning) alert(data.warning);
-          document.getElementById('postCard' + id)?.remove();
-        } else {
-          alert('Delete failed: ' + (data.error || 'Unknown error'));
-        }
-      } catch (err) {
-        alert('Request failed: ' + err.message);
-      }
-    }
-
-    async function deleteImage(id) {
-      if (!confirm(`Delete generated AI image asset #${id}?`)) return;
-      try {
-        const res = await fetch(`/api/images/${id}`, { method: 'DELETE' });
-        const data = await res.json();
-        if (data.success) {
-          document.getElementById('imgCard' + id)?.remove();
-        } else {
-          alert('Delete failed: ' + (data.error || 'Unknown error'));
-        }
-      } catch (err) {
-        alert('Request failed: ' + err.message);
-      }
-    }
-
-    async function deleteContentJob(id) {
-      if (!confirm(`Delete legacy video job #${id} and its files?`)) return;
-      try {
-        const res = await fetch(`/api/content/jobs/${id}`, { method: 'DELETE' });
-        const data = await res.json();
-        if (data.success) {
-          document.getElementById('jobCard' + id)?.remove();
-        } else {
-          alert('Delete failed: ' + (data.error || 'Unknown error'));
-        }
-      } catch (err) {
-        alert('Request failed: ' + err.message);
       }
     }
 
