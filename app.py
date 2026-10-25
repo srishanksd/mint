@@ -6,7 +6,7 @@ if __name__ == "__main__":
     load_dotenv(Path(__file__).resolve().parent / ".env", override=True)
 
 from flask import Flask
-from config import SECRET_KEY, PORT, HOST
+from config import SECRET_KEY, PORT, HOST, DB_PATH
 from database import init_db
 from routes.dashboard import dashboard_bp
 from routes.experiments import experiments_bp
