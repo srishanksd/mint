@@ -856,27 +856,39 @@ button:disabled {
   white-space: nowrap;
 }
 
-/* Modals */
-.modal-overlay {
+/* Modals & Dialog Overlays */
+.modal-overlay,
+.modal-backdrop {
   display: none;
   position: fixed;
-  top: 0; left: 0; width: 100vw; height: 100vh;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
   background: var(--modal-overlay-bg);
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
   justify-content: center;
   align-items: center;
-  z-index: 100;
+  z-index: 10000;
+  padding: 20px;
 }
 
-.modal-card {
+.modal-card,
+.modal-box {
   background: var(--surface-raised);
   color: var(--text-primary);
   width: 540px;
-  max-width: 90vw;
+  max-width: 92vw;
+  max-height: 90vh;
+  overflow-y: auto;
   border-radius: 14px;
-  padding: 28px;
-  box-shadow: var(--shadow-raised);
+  padding: 28px 30px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
   border: 1px solid var(--border-subtle);
+  position: relative;
 }
 
 /* Integrations Panels — 3-column balanced grid */

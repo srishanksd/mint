@@ -84,6 +84,7 @@ function toggleMINTTheme() {
 /* Initialization & Non-Overlapping Polling */
 document.addEventListener("DOMContentLoaded", () => {
   initTheme();
+  refreshYouTubeStatus();
   fetchOverview();
   loadChatHistory();
 
@@ -370,17 +371,24 @@ function renderActivityFeed(events) {
 
 /* External Platform Integrations UI */
 function updateIntegrationBadges(integrations) {
+  if (!integrations) return;
   const yt = integrations.youtube || {};
   const ig = integrations.instagram || {};
   const ai = integrations.ai || {};
 
   const aiPill = document.getElementById("pill-ai-status");
   if (aiPill) {
-    if (ai.active_provider === "unconfigured") {
+    if (!ai || ai.active_provider === "unconfigured") {
       aiPill.innerText = "AI: Unconfigured";
       aiPill.className = "status-pill waiting";
     } else {
-      aiPill.innerText = `AI: ${ai.active_provider.toUpperCase()} (${ai.model})`;
+      let label = "AI: ";
+      if (ai.active_provider === "local_deterministic") {
+        label += "Local Engine & MCP";
+      } else {
+        label += `${ai.active_provider.toUpperCase()} (${ai.model || 'Active'})`;
+      }
+      aiPill.innerText = label;
       aiPill.className = "status-pill connected";
     }
   }
