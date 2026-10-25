@@ -6,6 +6,8 @@ MINT discovers online business opportunities, creates digital product deliverabl
 ---
 [![Architecture diagram](https://gitdiagram.com/diagram-badge.svg)](https://gitdiagram.com/srishanksd/mint?utm_source=readme&utm_medium=badge)
 ---
+[![Architecture diagram of srishanksd/mint](https://gitdiagram.com/srishanksd/mint/diagram.png)](https://gitdiagram.com/srishanksd/mint?utm_source=readme&utm_medium=picture)
+---
 
 ## 1. Traceability & Metric Source Integrity (Zero-Fabrication Policy)
 
