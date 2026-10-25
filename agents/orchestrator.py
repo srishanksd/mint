@@ -168,7 +168,7 @@ class RealMINTOrchestrator:
             ig_status = InstagramService.get_status()
 
             publishing_status = "completed"
-            pub_notes = "Local export ready. Sandbox storefront live."
+            pub_notes = "Local export ready. Catalog entry live."
             if not yt_status["can_upload"]:
                 pub_notes += " YouTube: Awaiting OAuth token (export mode)."
             if not ig_status["can_publish"]:
@@ -179,7 +179,7 @@ class RealMINTOrchestrator:
                 output_summary=pub_notes,
                 decision_reason="Media packaged locally for manual distribution; automated API publishing waiting on OAuth permissions."
             )
-            log_activity(experiment_id, "Publishing Agent", "Assets ready for local export & deployed to local sandbox storefront.", "info")
+            log_activity(experiment_id, "Publishing Agent", "Assets ready for local export & catalog publication.", "info")
 
             # 7. Measurement & Analytics (TRUTHFUL LOGS ONLY)
             cur.execute("SELECT COUNT(*) as cnt FROM traffic_events WHERE experiment_id = ? AND event_type = 'view'", (experiment_id,))

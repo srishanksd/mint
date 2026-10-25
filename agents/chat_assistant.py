@@ -11,6 +11,7 @@ from datetime import datetime
 from typing import Optional, Dict, Any, List
 from database import get_db_connection, log_activity
 from services.ai_service import AIService
+from services.mcp_agent_client import MCPAgentClient
 from agents.quality_agent import QualityCheckerAgent
 from agents.context_builder import build_context
 
@@ -111,21 +112,28 @@ def _build_operational_answer(ctx: dict, text: str) -> str:
         if status == "connected":
             return (
                 f"Instagram is connected as @{ig.get('username')} ({ig.get('account_type')}). "
-                "Publishing is enabled. Public HTTPS media hosting is required by Meta to retrieve images."
+                "Publishing is enabled. Public HTTPS media hosting is configured for Meta crawler access."
+            )
+        elif status == "permission_error" or ig.get("error_code") == 200:
+            return (
+                f"Instagram connection issue: Meta API access blocked (OAuthException code 200). "
+                "Root cause: Your Meta Developer App is in Development mode or has restricted API access. "
+                "Actionable steps: 1) Switch your Meta App to Live Mode or add your Facebook User to App Roles (Roles -> Testers/Developers) at developers.facebook.com; "
+                "2) Verify 'instagram_content_publish' permission is approved; "
+                "3) Public HTTPS media hosting is active via Cloudinary."
             )
         elif status == "not_configured":
             return (
                 "Instagram is not configured. Missing INSTAGRAM_ACCOUNT_ID or INSTAGRAM_ACCESS_TOKEN in .env. "
-                "Add your Page token with instagram_business_content_publish scope to enable publishing."
+                "Add your Page token with instagram_content_publish scope to enable publishing."
             )
         return f"Instagram status: {status} ({ig.get('message')})"
 
-    # 6. Products & Affiliate catalog inquiry
-    if any(w in lower for w in ["product", "affiliate", "catalog", "offer", "store"]):
+    # 6. Digital Products catalog inquiry
+    if any(w in lower for w in ["product", "catalog", "deliverable", "guide"]):
         return (
-            f"MINT currently has {prod_cnt} real digital products in the catalog and {aff_cnt} active affiliate offers. "
-            f"Recorded affiliate traffic: {aff_clicks} clicks, verified commissions: ${aff_earned:.2f}. "
-            "Products are generated using Chromium PDF rendering and synced with Gumroad."
+            f"MINT currently has {prod_cnt} real digital products in the catalog. "
+            "Products are generated using Chromium PDF rendering and synced with Gumroad for instant automated fulfillment."
         )
 
     # 7. If experiment is required for operational answer but missing
