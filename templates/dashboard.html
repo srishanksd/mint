@@ -32,35 +32,34 @@
   <header>
     <div>
       <h1 class="brand-title">MINT</h1>
-      <p class="brand-subtitle">Autonomous Digital Venture Engine & Portfolio Allocator</p>
+      <p class="brand-subtitle">Personal Venture Engine &amp; Media Studio</p>
     </div>
     <div style="display: flex; gap: 12px; align-items: center;">
-      <span class="status-pill" id="pill-ai-status">Checking AI...</span>
+      <span class="status-pill" id="pill-ai-status">Local Engine</span>
       <button class="neo-btn neo-btn-primary" onclick="openStartModal()">Launch Venture Run</button>
     </div>
   </header>
 
-  <!-- Metric Overview Cards -->
-  <div class="metrics-row">
+  <!-- Metric Overview Cards (Budget Limit Removed) -->
+  <div class="metrics-row" style="grid-template-columns: repeat(4, 1fr);">
+    <!-- Hidden element kept for JS polling backward-compatibility -->
+    <div id="val-budget" style="display:none;"></div>
+    <div id="val-status" style="display:none;"></div>
+
     <div class="metric-box">
-      <div class="metric-label">Approved Budget Limit</div>
-      <div class="metric-value" id="val-budget">$0.00</div>
-      <div class="metric-sub" id="val-status">No active run</div>
-    </div>
-    <div class="metric-box">
-      <div class="metric-label">Logged Traffic & Clicks</div>
+      <div class="metric-label">Logged Traffic &amp; Clicks</div>
       <div class="metric-value" id="val-traffic">0 views</div>
       <div class="metric-sub" id="val-clicks">0 clicks &middot; <span id="val-traffic-source">Verified logs</span></div>
     </div>
     <div class="metric-box">
-      <div class="metric-label">Sales & Transactions</div>
+      <div class="metric-label">Sales &amp; Transactions</div>
       <div class="metric-value" id="val-gross">$0.00</div>
       <div class="metric-sub" id="val-orders">0 real orders (0 test)</div>
     </div>
     <div class="metric-box">
       <div class="metric-label">Net Operating Profit</div>
       <div class="metric-value" id="val-profit" style="color: var(--accent-teal);">$0.00</div>
-      <div class="metric-sub" id="val-fees">After processing fees & operational spend</div>
+      <div class="metric-sub" id="val-fees">After processing fees &amp; operational spend</div>
     </div>
     <div class="metric-box">
       <div class="metric-label">Compulsory Cash Reserve</div>
@@ -70,294 +69,97 @@
   </div>
 
   <div class="dashboard-grid">
-    <!-- Left Column: Architecture, Assets, Portfolio -->
+    <!-- Left Column: Quick Features & Output Deliverables -->
     <div class="main-column">
-      <!-- Live Architecture Graph -->
-      <div class="neo-card">
-        <div class="card-title">
-          <span>Autonomous Agent Architecture</span>
-          <span style="font-size:15.5px; color:var(--text-muted);">Real-time execution pipeline &middot; Click node to inspect</span>
+      <!-- Quick Access Feature Hub -->
+      <div class="neo-card" style="padding-bottom: 18px;">
+        <div class="card-title" style="margin-bottom: 16px;">
+          <span>Venture Control Center</span>
+          <span style="font-size:14.5px; color:var(--text-muted);">Direct tools &amp; generation suites</span>
         </div>
-
-        <!-- Live Execution Progression Banner -->
-        <div class="execution-banner" id="execution-banner">
-          <div class="execution-banner-top">
-            <div>
-              <span style="font-weight:600; font-size:16.5px" id="exec-run-name">Venture Pipeline</span>
-              <span class="status-pill" id="exec-status-pill" style="margin-left:8px;">Engine Idle</span>
+        <div class="quick-feature-grid" style="margin-bottom: 0;">
+          <a href="/youtube-clips" class="quick-feature-card">
+            <div class="qf-icon-wrap" style="background: rgba(255, 255, 255, 0.05); color: #fafafa; border: 1px solid var(--border-subtle);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
             </div>
-            <div style="font-size:15.5px; color:var(--text-muted);">
-              <span id="exec-stage-label">Stage 0/9</span> &middot;
-              <span id="exec-elapsed-time">Elapsed: 0s</span>
+            <div class="qf-body">
+              <div class="qf-head">
+                <span class="qf-title">AI Video Clipper</span>
+                <span class="qf-badge" style="background:#18181b; color:#a1a1aa; border: 1px solid #27272a;">Native Offline</span>
+              </div>
+              <p class="qf-desc">Extract viral 9:16 Shorts with Faster-Whisper, smart face zoom-crop &amp; subtitles.</p>
             </div>
-          </div>
-          <div class="execution-progress-bar-wrap">
-            <div class="execution-progress-bar" id="exec-progress-bar" style="width: 0%;"></div>
-          </div>
-          <div style="font-size:15.5px; color:var(--text-muted); display:flex; justify-content:space-between; flex-wrap:wrap; gap:4px;">
-            <span id="exec-current-task">Awaiting venture launch</span>
-            <span id="exec-latest-event" style="color:var(--accent-teal);">No active run</span>
-          </div>
-        </div>
+          </a>
 
-        <div class="architecture-container">
-          
-          <!-- Stage I: Discovery & Strategy (3 nodes) -->
-          <div class="arch-stage-meta">
-            <span class="stage-pill">STAGE I</span>
-            <span class="stage-name">Strategic Opportunity &amp; Architecture</span>
-          </div>
-          <div class="arch-row arch-row-3">
-            <div class="agent-node waiting" id="node-scout" onclick="inspectNode('Opportunity Scout')">
-              <div class="agent-node-head">
-                <span class="agent-name">1. Opportunity Scout</span>
-                <span class="agent-status-tag waiting" id="tag-scout">Waiting</span>
-              </div>
-              <div class="agent-node-body">
-                <div class="agent-info-row">
-                  <span class="agent-info-label">Operation:</span>
-                  <span class="agent-info-val" id="task-scout">Scanning market niches...</span>
-                </div>
-                <div class="agent-info-row">
-                  <span class="agent-info-label">Output:</span>
-                  <span class="agent-info-val" id="output-scout">—</span>
-                </div>
-                <div class="agent-err-box" id="err-scout" style="display:none;"></div>
-              </div>
-              <div class="agent-node-foot">
-                <span class="agent-time" id="time-scout">—</span>
-                <span class="agent-inspect-hint">Details ↗</span>
-              </div>
+          <a href="/studio" class="quick-feature-card">
+            <div class="qf-icon-wrap" style="background: rgba(255, 255, 255, 0.05); color: #fafafa; border: 1px solid var(--border-subtle);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
             </div>
-
-            <div class="arch-arrow-h" aria-hidden="true">→</div>
-
-            <div class="agent-node waiting" id="node-strategy" onclick="inspectNode('Strategy Agent')">
-              <div class="agent-node-head">
-                <span class="agent-name">2. Strategy Agent</span>
-                <span class="agent-status-tag waiting" id="tag-strategy">Waiting</span>
+            <div class="qf-body">
+              <div class="qf-head">
+                <span class="qf-title">Content Studio</span>
+                <span class="qf-badge" style="background:#18181b; color:#a1a1aa; border: 1px solid #27272a;">Multi-Platform</span>
               </div>
-              <div class="agent-node-body">
-                <div class="agent-info-row">
-                  <span class="agent-info-label">Operation:</span>
-                  <span class="agent-info-val" id="task-strategy">Evaluating unit economics...</span>
-                </div>
-                <div class="agent-info-row">
-                  <span class="agent-info-label">Output:</span>
-                  <span class="agent-info-val" id="output-strategy">—</span>
-                </div>
-                <div class="agent-err-box" id="err-strategy" style="display:none;"></div>
-              </div>
-              <div class="agent-node-foot">
-                <span class="agent-time" id="time-strategy">—</span>
-                <span class="agent-inspect-hint">Details ↗</span>
-              </div>
+              <p class="qf-desc">Generate, refine and review viral copy, carousel hooks, and promotional media.</p>
             </div>
+          </a>
 
-            <div class="arch-arrow-h" aria-hidden="true">→</div>
-
-            <div class="agent-node waiting" id="node-orchestrator" onclick="inspectNode('MINT Orchestrator')">
-              <div class="agent-node-head">
-                <span class="agent-name">3. Orchestrator</span>
-                <span class="agent-status-tag waiting" id="tag-orchestrator">Waiting</span>
-              </div>
-              <div class="agent-node-body">
-                <div class="agent-info-row">
-                  <span class="agent-info-label">Operation:</span>
-                  <span class="agent-info-val" id="task-orchestrator">Coordinating pipeline...</span>
-                </div>
-                <div class="agent-info-row">
-                  <span class="agent-info-label">Output:</span>
-                  <span class="agent-info-val" id="output-orchestrator">—</span>
-                </div>
-                <div class="agent-err-box" id="err-orchestrator" style="display:none;"></div>
-              </div>
-              <div class="agent-node-foot">
-                <span class="agent-time" id="time-orchestrator">—</span>
-                <span class="agent-inspect-hint">Details ↗</span>
-              </div>
+          <a href="/products" class="quick-feature-card">
+            <div class="qf-icon-wrap" style="background: rgba(255, 255, 255, 0.05); color: #fafafa; border: 1px solid var(--border-subtle);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"></line><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
             </div>
-          </div>
-
-          <!-- Flow Connector: Stage I -> Stage II -->
-          <div class="arch-connector-v">
-            <span class="connector-arrow">↓</span>
-            <span class="connector-desc">Synthesize assets &amp; verify compliance</span>
-          </div>
-
-          <!-- Stage II: Asset Generation & Audit (2 nodes) -->
-          <div class="arch-stage-meta">
-            <span class="stage-pill">STAGE II</span>
-            <span class="stage-name">Asset Synthesis &amp; Compliance Audit</span>
-          </div>
-          <div class="arch-row arch-row-2">
-            <div class="agent-node waiting" id="node-creator" onclick="inspectNode('Content Creator')">
-              <div class="agent-node-head">
-                <span class="agent-name">4. Content Creator</span>
-                <span class="agent-status-tag waiting" id="tag-creator">Waiting</span>
+            <div class="qf-body">
+              <div class="qf-head">
+                <span class="qf-title">Digital Products</span>
+                <span class="qf-badge" style="background:#18181b; color:#a1a1aa; border: 1px solid #27272a;">Catalog</span>
               </div>
-              <div class="agent-node-body">
-                <div class="agent-info-row">
-                  <span class="agent-info-label">Operation:</span>
-                  <span class="agent-info-val" id="task-creator">Rendering MP4 &amp; copy...</span>
-                </div>
-                <div class="agent-info-row">
-                  <span class="agent-info-label">Output:</span>
-                  <span class="agent-info-val" id="output-creator">—</span>
-                </div>
-                <div class="agent-err-box" id="err-creator" style="display:none;"></div>
-              </div>
-              <div class="agent-node-foot">
-                <span class="agent-time" id="time-creator">—</span>
-                <span class="agent-inspect-hint">Details ↗</span>
-              </div>
+              <p class="qf-desc">Manage sellable guides, actionable templates, and downloadable venture artifacts.</p>
             </div>
+          </a>
 
-            <div class="arch-arrow-h" aria-hidden="true">→</div>
-
-            <div class="agent-node waiting" id="node-quality" onclick="inspectNode('Quality Checker')">
-              <div class="agent-node-head">
-                <span class="agent-name">5. Quality Checker</span>
-                <span class="agent-status-tag waiting" id="tag-quality">Waiting</span>
-              </div>
-              <div class="agent-node-body">
-                <div class="agent-info-row">
-                  <span class="agent-info-label">Operation:</span>
-                  <span class="agent-info-val" id="task-quality">Auditing disclosures &amp; claims...</span>
-                </div>
-                <div class="agent-info-row">
-                  <span class="agent-info-label">Output:</span>
-                  <span class="agent-info-val" id="output-quality">—</span>
-                </div>
-                <div class="agent-err-box" id="err-quality" style="display:none;"></div>
-              </div>
-              <div class="agent-node-foot">
-                <span class="agent-time" id="time-quality">—</span>
-                <span class="agent-inspect-hint">Details ↗</span>
-              </div>
+          <a href="/portfolio" class="quick-feature-card">
+            <div class="qf-icon-wrap" style="background: rgba(255, 255, 255, 0.05); color: #fafafa; border: 1px solid var(--border-subtle);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
             </div>
-          </div>
-
-          <!-- Flow Connector: Stage II -> Stage III -->
-          <div class="arch-connector-v">
-            <span class="connector-arrow">↓</span>
-            <span class="connector-desc">Deploy sandbox &amp; measure authentic traffic</span>
-          </div>
-
-          <!-- Stage III: Distribution & Measurement (2 nodes) -->
-          <div class="arch-stage-meta">
-            <span class="stage-pill">STAGE III</span>
-            <span class="stage-name">Platform Distribution &amp; Traffic Measurement</span>
-          </div>
-          <div class="arch-row arch-row-2">
-            <div class="agent-node waiting" id="node-commerce" onclick="inspectNode('Publishing Agent')">
-              <div class="agent-node-head">
-                <span class="agent-name">6. Publishing Agent</span>
-                <span class="agent-status-tag waiting" id="tag-commerce">Waiting</span>
+            <div class="qf-body">
+              <div class="qf-head">
+                <span class="qf-title">Portfolio Allocator</span>
+                <span class="qf-badge" style="background:#18181b; color:#a1a1aa; border: 1px solid #27272a;">Automated</span>
               </div>
-              <div class="agent-node-body">
-                <div class="agent-info-row">
-                  <span class="agent-info-label">Operation:</span>
-                  <span class="agent-info-val" id="task-commerce">Verifying platform readiness...</span>
-                </div>
-                <div class="agent-info-row">
-                  <span class="agent-info-label">Output:</span>
-                  <span class="agent-info-val" id="output-commerce">—</span>
-                </div>
-                <div class="agent-err-box" id="err-commerce" style="display:none;"></div>
-              </div>
-              <div class="agent-node-foot">
-                <span class="agent-time" id="time-commerce">—</span>
-                <span class="agent-inspect-hint">Details ↗</span>
-              </div>
+              <p class="qf-desc">Monitor treasury yield, 25% reserve lock, and rule-based profit allocations.</p>
             </div>
-
-            <div class="arch-arrow-h" aria-hidden="true">→</div>
-
-            <div class="agent-node waiting" id="node-measurement" onclick="inspectNode('Measurement Agent')">
-              <div class="agent-node-head">
-                <span class="agent-name">7. Measurement Agent</span>
-                <span class="agent-status-tag waiting" id="tag-measurement">Waiting</span>
-              </div>
-              <div class="agent-node-body">
-                <div class="agent-info-row">
-                  <span class="agent-info-label">Operation:</span>
-                  <span class="agent-info-val" id="task-measurement">Awaiting logged traffic...</span>
-                </div>
-                <div class="agent-info-row">
-                  <span class="agent-info-label">Output:</span>
-                  <span class="agent-info-val" id="output-measurement">—</span>
-                </div>
-                <div class="agent-err-box" id="err-measurement" style="display:none;"></div>
-              </div>
-              <div class="agent-node-foot">
-                <span class="agent-time" id="time-measurement">—</span>
-                <span class="agent-inspect-hint">Details ↗</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Flow Connector: Stage III -> Stage IV -->
-          <div class="arch-connector-v">
-            <span class="connector-arrow">↓</span>
-            <span class="connector-desc">Deterministic accounting &amp; paper surplus allocation</span>
-          </div>
-
-          <!-- Stage IV: Finance & Portfolio (2 nodes) -->
-          <div class="arch-stage-meta">
-            <span class="stage-pill">STAGE IV</span>
-            <span class="stage-name">Financial Accounting &amp; Paper Allocation</span>
-          </div>
-          <div class="arch-row arch-row-2">
-            <div class="agent-node waiting" id="node-finance" onclick="inspectNode('Finance Agent')">
-              <div class="agent-node-head">
-                <span class="agent-name">8. Finance Agent</span>
-                <span class="agent-status-tag waiting" id="tag-finance">Waiting</span>
-              </div>
-              <div class="agent-node-body">
-                <div class="agent-info-row">
-                  <span class="agent-info-label">Operation:</span>
-                  <span class="agent-info-val" id="task-finance">Reconciling ledger &amp; reserves...</span>
-                </div>
-                <div class="agent-info-row">
-                  <span class="agent-info-label">Output:</span>
-                  <span class="agent-info-val" id="output-finance">—</span>
-                </div>
-                <div class="agent-err-box" id="err-finance" style="display:none;"></div>
-              </div>
-              <div class="agent-node-foot">
-                <span class="agent-time" id="time-finance">—</span>
-                <span class="agent-inspect-hint">Details ↗</span>
-              </div>
-            </div>
-
-            <div class="arch-arrow-h" aria-hidden="true">→</div>
-
-            <div class="agent-node waiting" id="node-portfolio" onclick="inspectNode('Portfolio Manager')">
-              <div class="agent-node-head">
-                <span class="agent-name">9. Portfolio Manager</span>
-                <span class="agent-status-tag waiting" id="tag-portfolio">Waiting</span>
-              </div>
-              <div class="agent-node-body">
-                <div class="agent-info-row">
-                  <span class="agent-info-label">Operation:</span>
-                  <span class="agent-info-val" id="task-portfolio">Balancing surplus allocation...</span>
-                </div>
-                <div class="agent-info-row">
-                  <span class="agent-info-label">Output:</span>
-                  <span class="agent-info-val" id="output-portfolio">—</span>
-                </div>
-                <div class="agent-err-box" id="err-portfolio" style="display:none;"></div>
-              </div>
-              <div class="agent-node-foot">
-                <span class="agent-time" id="time-portfolio">—</span>
-                <span class="agent-inspect-hint">Details ↗</span>
-              </div>
-            </div>
-          </div>
-
+          </a>
         </div>
       </div>
+
+      <!-- Hidden execution banner and low-level agent inspector for JS polling integrity -->
+      <div style="display:none;" id="execution-banner">
+        <span id="exec-run-name"></span>
+        <span id="exec-status-pill"></span>
+        <span id="exec-stage-label"></span>
+        <span id="exec-elapsed-time"></span>
+        <div id="exec-progress-bar"></div>
+        <span id="exec-current-task"></span>
+        <span id="exec-latest-event"></span>
+        <div id="step-stage-1"></div>
+        <div id="step-stage-2"></div>
+        <div id="step-stage-3"></div>
+        <div id="step-stage-4"></div>
+      </div>
+
+      <!-- Collapsible Diagnostic Pipeline (Clean Hidden Container) -->
+      <details class="agent-inspector-accordion" style="display:none;">
+        <summary>Diagnostics</summary>
+        <div class="agent-node" id="node-scout"><span id="tag-scout"></span><span id="task-scout"></span><span id="output-scout"></span><span id="err-scout"></span><span id="time-scout"></span></div>
+        <div class="agent-node" id="node-strategy"><span id="tag-strategy"></span><span id="task-strategy"></span><span id="output-strategy"></span><span id="err-strategy"></span><span id="time-strategy"></span></div>
+        <div class="agent-node" id="node-orchestrator"><span id="tag-orchestrator"></span><span id="task-orchestrator"></span><span id="output-orchestrator"></span><span id="err-orchestrator"></span><span id="time-orchestrator"></span></div>
+        <div class="agent-node" id="node-creator"><span id="tag-creator"></span><span id="task-creator"></span><span id="output-creator"></span><span id="err-creator"></span><span id="time-creator"></span></div>
+        <div class="agent-node" id="node-quality"><span id="tag-quality"></span><span id="task-quality"></span><span id="output-quality"></span><span id="err-quality"></span><span id="time-quality"></span></div>
+        <div class="agent-node" id="node-commerce"><span id="tag-commerce"></span><span id="task-commerce"></span><span id="output-commerce"></span><span id="err-commerce"></span><span id="time-commerce"></span></div>
+        <div class="agent-node" id="node-measurement"><span id="tag-measurement"></span><span id="task-measurement"></span><span id="output-measurement"></span><span id="err-measurement"></span><span id="time-measurement"></span></div>
+        <div class="agent-node" id="node-finance"><span id="tag-finance"></span><span id="task-finance"></span><span id="output-finance"></span><span id="err-finance"></span><span id="time-finance"></span></div>
+        <div class="agent-node" id="node-portfolio"><span id="tag-portfolio"></span><span id="task-portfolio"></span><span id="output-portfolio"></span><span id="err-portfolio"></span><span id="time-portfolio"></span></div>
+      </details>
 
       <!-- Generated Venture Asset & Digital Product Deliverable -->
       <div class="neo-card" id="card-artifact" style="display:none;">
@@ -397,6 +199,99 @@
           <div style="flex:1;" id="portfolio-table"></div>
         </div>
       </div>
+
+      <!-- External Platform Integrations (Docked directly beneath Control Center) -->
+      <div class="neo-card" id="card-integrations">
+        <div class="card-title" style="margin-bottom: 14px;">
+          <span>External Platform Integrations</span>
+          <span style="font-size:14px; color:var(--text-muted);">Official OAuth &amp; Meta Graph Connections</span>
+        </div>
+        <div class="integrations-grid">
+
+          <!-- YouTube OAuth Panel -->
+          <div class="integration-panel">
+            <div class="integration-header">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span class="platform-icon" style="background:#27272a; color:#fafafa; border:1px solid #3f3f46;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                </span>
+                <strong>YouTube Data API v3</strong>
+              </div>
+              <span class="status-pill" id="pill-yt">Checking...</span>
+            </div>
+            <p class="integration-status-text" id="desc-yt">Checking connection status...</p>
+            
+            <!-- Real YouTube Channel Stats -->
+            <div id="yt-channel-info" class="yt-info-card" style="display:none;"></div>
+
+            <!-- MINT Recorded Uploads List -->
+            <div id="yt-uploads-section" class="yt-uploads-section" style="display:none;">
+              <div class="yt-uploads-title">Recorded MINT Uploads (Private):</div>
+              <div id="yt-uploads-list" class="yt-uploads-list"></div>
+            </div>
+
+            <div class="integration-actions" style="display:flex; flex-wrap:wrap; gap:8px;">
+              <a href="/auth/youtube" class="neo-btn neo-btn-primary" id="btn-yt-connect" style="text-decoration:none; display:none;">Connect YouTube</a>
+              <button class="neo-btn" id="btn-yt-test" onclick="testYouTube(true)" style="display:none;">Refresh Channel Info</button>
+              <a href="/youtube-clips" class="neo-btn" style="text-decoration:none;">Clips &amp; Schedule</a>
+              <button class="neo-btn" id="btn-yt-upload" onclick="openUploadModal()" style="display:none;">Upload Video</button>
+              <button class="neo-btn" id="btn-yt-disconnect" onclick="disconnectYouTube()" style="color:#ef4444; display:none;">Disconnect</button>
+            </div>
+          </div>
+
+          <!-- Instagram Panel -->
+          <div class="integration-panel">
+            <div class="integration-header">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span class="platform-icon" style="background:#27272a; color:#fafafa; border:1px solid #3f3f46;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+                </span>
+                <strong>Instagram Meta Graph</strong>
+              </div>
+              <span class="status-pill" id="pill-ig">Checking...</span>
+            </div>
+            <p class="integration-status-text" id="desc-ig">Checking Instagram Creator / Business token.</p>
+            
+            <!-- Instagram Details & Status -->
+            <div id="ig-account-info" class="ig-info-card" style="display:none;"></div>
+
+            <!-- Setup Required Guide -->
+            <div id="ig-setup-guide" class="ig-setup-card" style="display:none;">
+              <div style="font-weight:600; margin-bottom:4px; font-size:15px">Connection diagnostic / next steps</div>
+              <ol style="margin-left:18px; font-size:14px; color:var(--text-muted);">
+                <li>Choose the login flow used to create this token.</li>
+                <li>Use the matching account ID, token and publishing permission.</li>
+                <li>For Instagram Login, use instagram_business_basic and instagram_business_content_publish.</li>
+                <li>For Facebook Login, use the Page-connected Instagram flow and its required permissions.</li>
+                <li>Publishing videos requires a public HTTPS media URL; local files are export-only.</li>
+              </ol>
+            </div>
+
+            <div class="integration-actions" style="margin-top:10px;">
+              <button class="neo-btn" id="btn-ig-check" onclick="checkInstagram()">Check Connection</button>
+            </div>
+          </div>
+
+          <!-- Native AI Video Clipper & Shorts Engine Panel -->
+          <div class="integration-panel">
+            <div class="integration-header">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span class="platform-icon" style="background:#27272a; color:#fafafa; border:1px solid #3f3f46;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><line x1="20" y1="4" x2="8.12" y2="15.88"></line><line x1="14.47" y1="14.48" x2="20" y2="20"></line><line x1="8.12" y1="8.12" x2="12" y2="12"></line></svg>
+                </span>
+                <strong>Native AI Video Clipper</strong>
+              </div>
+              <span class="status-pill" id="pill-clipper">Checking...</span>
+            </div>
+            <p class="integration-status-text" id="desc-clipper">Faster-Whisper speech analysis + MediaPipe face zoom-crop + local FFmpeg 9:16 renderer.</p>
+            <div id="clipper-info" class="ig-info-card" style="display:none; margin-top:8px; font-size:14px; line-height:1.5;"></div>
+            <div class="integration-actions" style="display:flex; gap:8px; margin-top:10px;">
+              <a href="/youtube-clips" class="neo-btn neo-btn-primary" style="text-decoration:none;">Open Video Clipper</a>
+              <button class="neo-btn" onclick="checkClipper()">Refresh Status</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Right Column: Interactive Chat & Live Activity Feed -->
@@ -418,99 +313,17 @@
         </div>
       </div>
 
-      <!-- Calm Activity Log -->
+      <!-- ChromaDB Memory & Important Activities -->
       <div class="neo-card">
         <div class="card-title">
-          <span>Activity Log</span>
-          <span style="font-size:15px; color:var(--text-muted);">Verified Events</span>
+          <span>Activity Memory</span>
+          <span style="font-size:14.5px; color:var(--text-muted); display:flex; align-items:center; gap:6px;">
+            <span style="width:8px; height:8px; border-radius:50%; background:#10b981; display:inline-block;"></span>
+            ChromaDB Vector Store
+          </span>
         </div>
-        <div class="activity-feed-list" id="activity-feed"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Integrations & External Service Health — Full Width Section -->
-  <div class="neo-card" style="margin-top: 8px;">
-    <div class="card-title">
-      <span>External Platform Integrations</span>
-      <span style="font-size:16.5px; color:var(--text-muted);">Official OAuth &amp; Meta Graph Connections</span>
-    </div>
-    <div class="integrations-grid">
-
-      <!-- YouTube OAuth Panel -->
-      <div class="integration-panel">
-        <div class="integration-header">
-          <div style="display:flex; align-items:center; gap:8px;">
-            <span class="platform-icon yt">▶</span>
-            <strong>YouTube Data API v3</strong>
-          </div>
-          <span class="status-pill" id="pill-yt">Checking...</span>
-        </div>
-        <p class="integration-status-text" id="desc-yt">Checking connection status...</p>
-        
-        <!-- Real YouTube Channel Stats -->
-        <div id="yt-channel-info" class="yt-info-card" style="display:none;"></div>
-
-        <!-- MINT Recorded Uploads List -->
-        <div id="yt-uploads-section" class="yt-uploads-section" style="display:none;">
-          <div class="yt-uploads-title">Recorded MINT Uploads (Private):</div>
-          <div id="yt-uploads-list" class="yt-uploads-list"></div>
-        </div>
-
-        <div class="integration-actions">
-          <a href="/auth/youtube" class="neo-btn neo-btn-primary" id="btn-yt-connect" style="font-size:16.5px; text-decoration:none; display:none;">Connect YouTube</a>
-          <button class="neo-btn" id="btn-yt-test" onclick="testYouTube(true)" style="font-size:16.5px; display:none;">Refresh Channel Info</button>
-          <a href="/youtube-clips" class="neo-btn" style="font-size:16.5px; text-decoration:none;">Clips &amp; Schedule ↗</a>
-          <button class="neo-btn" id="btn-yt-upload" onclick="openUploadModal()" style="font-size:16.5px; display:none;">Upload Video</button>
-          <button class="neo-btn" id="btn-yt-disconnect" onclick="disconnectYouTube()" style="font-size:16.5px; color:#c0392b; display:none;">Disconnect</button>
-        </div>
-      </div>
-
-      <!-- Instagram Panel -->
-      <div class="integration-panel">
-        <div class="integration-header">
-          <div style="display:flex; align-items:center; gap:8px;">
-            <span class="platform-icon ig">📷</span>
-            <strong>Instagram Meta Graph</strong>
-          </div>
-          <span class="status-pill" id="pill-ig">Checking...</span>
-        </div>
-        <p class="integration-status-text" id="desc-ig">Checking Instagram Creator / Business token.</p>
-        
-        <!-- Instagram Details & Status -->
-        <div id="ig-account-info" class="ig-info-card" style="display:none;"></div>
-
-        <!-- Setup Required Guide -->
-        <div id="ig-setup-guide" class="ig-setup-card" style="display:none;">
-          <div style="font-weight:600; margin-bottom:4px; font-size:16.5px">Connection diagnostic / next steps</div>
-          <ol style="margin-left:18px; font-size:16px; color:var(--text-muted);">
-            <li>Choose the login flow used to create this token.</li>
-            <li>Use the matching account ID, token and publishing permission.</li>
-            <li>For Instagram Login, use instagram_business_basic and instagram_business_content_publish.</li>
-            <li>For Facebook Login, use the Page-connected Instagram flow and its required permissions.</li>
-            <li>Publishing videos requires a public HTTPS media URL; local files are export-only.</li>
-          </ol>
-        </div>
-
-        <div class="integration-actions">
-          <button class="neo-btn" id="btn-ig-check" onclick="checkInstagram()" style="font-size:16.5px">Check Connection</button>
-        </div>
-      </div>
-
-      <!-- OpenShorts MCP & Local Video Clipper Panel -->
-      <div class="integration-panel">
-        <div class="integration-header">
-          <div style="display:flex; align-items:center; gap:8px;">
-            <span class="platform-icon" style="background:#e0e7ff; color:#4f46e5; border-radius:4px; padding:2px 6px; font-size:16.5px">✂️</span>
-            <strong>OpenShorts MCP &amp; Local Clipper</strong>
-          </div>
-          <span class="status-pill" id="pill-clipper">Checking...</span>
-        </div>
-        <p class="integration-status-text" id="desc-clipper">Checking OpenShorts MCP server connection &amp; local FFmpeg engine.</p>
-        <div id="clipper-info" class="ig-info-card" style="display:none; margin-top:8px; font-size:16.5px; line-height:1.5;"></div>
-        <div class="integration-actions" style="margin-top:10px;">
-          <a href="/youtube-clips" class="neo-btn neo-btn-primary" style="font-size:16.5px; text-decoration:none;">Open Clips Agent</a>
-          <button class="neo-btn" onclick="checkClipper()" style="font-size:16.5px">Refresh Status</button>
+        <div class="activity-feed-list" id="activity-feed" style="max-height: 270px; overflow-y: auto;">
+          <div style="text-align:center; padding:18px; color:var(--text-muted); font-size:14px;">Loading verified activities from ChromaDB...</div>
         </div>
       </div>
     </div>
