@@ -28,14 +28,15 @@ MINT does not invent numbers. Every displayed business metric has a traceable or
 2. **`Strategy Agent`** (`agents/strategy_agent.py`): Evaluates unit economics against budget limits and adapts based on historical venture performance.
 3. **`MINT Orchestrator`** (`agents/orchestrator.py`): Manages pipeline execution, recording timestamps, checkpoints, and exception handling.
 4. **`YouTube Clips & OpenShorts Agent`** (`agents/youtube_clips_agent.py`): Orchestrates YouTube channel discovery, OpenShorts MCP tool execution, and local 9:16 vertical video clipping with `faster-whisper` and FFmpeg.
-5. **`Product Builder & Digital Product Engine`** (`agents/product_builder.py`, `services/digital_product_engine.py`): Generates genuine digital product deliverables (PDF ebooks, styled HTML guides, JSON manifests) persisted to the `digital_products` catalog and synchronized with Gumroad.
-6. **`Quality Checker`** (`agents/quality_agent.py`): Deterministically audits regulatory disclosures, claim safety, and deliverable completeness.
-7. **`Social Publishing Engine`** (`services/social_service.py`): Manages YouTube OAuth 2.0 uploads and Instagram Graph API publishing with Cloudinary public media hosting diagnostics.
-8. **`Measurement Agent`** (`agents/measurement_agent.py`): Evaluates funnel metrics strictly using logged traffic events and verified transactions.
-9. **`Finance Agent`** (`agents/finance_agent.py`): Deterministically reconciles gross receipts, merchant fees, refunds, and operational spend. Sandbox test orders are distinctly separated from real P&L.
-10. **`Portfolio Manager`** (`agents/portfolio_manager.py`): Partitions eligible surplus into paper asset classes (Conservative, Balanced, Growth) with exact monetary and percentage reconciliation.
-11. **`Context Builder & In-Dashboard Chat`** (`agents/context_builder.py`, `agents/chat_assistant.py`): Feeds live database metrics directly to conversational reasoning with zero hallucinations.
-12. **`Venture Control MCP Server & Clients`** (`services/mint_mcp_server.py`, `services/mcp_agent_client.py`, `services/clipper_mcp_client.py`, `services/local_clipper_service.py`): Native Model Context Protocol (MCP) server exposing operational venture control tools to external AI clients with persistent SQLite audit logs in `mcp_audit_logs`.
+5. **`Native Autonomous Video Clipping Engine`** (`services/clipping/`): A 10-stage intelligent vertical video clipping pipeline that ingests long-form video, extracts word-level speech timestamps with `faster-whisper`, scores viral moments, applies 9:16 smart framing with scene detection, generates dynamic animated captions, and renders finished clips via FFmpeg.
+6. **`Product Builder & Digital Product Engine`** (`agents/product_builder.py`, `services/digital_product_engine.py`): Generates genuine digital product deliverables (PDF ebooks, styled HTML guides, JSON manifests) persisted to the `digital_products` catalog and synchronized with Gumroad.
+7. **`Quality Checker`** (`agents/quality_agent.py`, `services/clipping/quality_checker.py`): Deterministically audits regulatory disclosures, claim safety, video resolution, duration, and deliverable completeness.
+8. **`Social Publishing Engine`** (`services/social_service.py`): Manages YouTube OAuth 2.0 uploads and Instagram Graph API publishing with Cloudinary public media hosting diagnostics.
+9. **`Measurement Agent`** (`agents/measurement_agent.py`): Evaluates funnel metrics strictly using logged traffic events and verified transactions.
+10. **`Finance Agent`** (`agents/finance_agent.py`): Deterministically reconciles gross receipts, merchant fees, refunds, and operational spend. Sandbox test orders are distinctly separated from real P&L.
+11. **`Portfolio Manager`** (`agents/portfolio_manager.py`): Partitions eligible surplus into paper asset classes (Conservative, Balanced, Growth) with exact monetary and percentage reconciliation.
+12. **`Context Builder & In-Dashboard Chat`** (`agents/context_builder.py`, `agents/chat_assistant.py`): Feeds live database metrics directly to conversational reasoning with zero hallucinations.
+13. **`Venture Control MCP Server & Clients`** (`services/mint_mcp_server.py`, `services/mcp_agent_client.py`, `services/clipper_mcp_client.py`): Native Model Context Protocol (MCP) server exposing operational venture control tools to external AI clients with persistent SQLite audit logs in `mcp_audit_logs`.
 
 ---
 
@@ -44,8 +45,8 @@ MINT does not invent numbers. Every displayed business metric has a traceable or
 ```text
 mint/
 ├── app.py                             # Flask application factory and blueprint registration
-├── config.py                          # Central configuration, SQLite paths, and environment settings
-├── database.py                        # SQLite schema with idempotent migrations and helpers
+├── config.py                          # Central configuration and environment settings
+├── database.py                        # SQLite schema with idempotent migrations
 ├── requirements.txt                   # Declared application dependencies
 ├── run.bat                            # Windows 1-click startup script
 ├── PLAN.md                            # Comprehensive milestone implementation plan
@@ -53,7 +54,7 @@ mint/
 ├── .env                               # Local configuration file (git-ignored)
 ├── .gitignore                         # Git ignore rules for caches, media, and credentials
 │
-├── agents/                            # Autonomous decision & orchestration engines
+├── agents/                            # Autonomous decision & orchestration engines (12 agents)
 │   ├── chat_assistant.py              # In-dashboard contextual consultation assistant
 │   ├── context_builder.py             # Live state and metrics aggregator for AI context
 │   ├── creator_agent.py               # Generates copy, social hooks, and promotional content
@@ -67,7 +68,7 @@ mint/
 │   ├── strategy_agent.py              # Business model and audience selection
 │   └── youtube_clips_agent.py         # Autonomous channel discovery and viral clipping agent
 │
-├── routes/                            # Modular Flask route blueprints
+├── routes/                            # Modular Flask route blueprints (8 blueprints)
 │   ├── chat.py                        # In-dashboard AI copilot endpoints
 │   ├── content_studio.py              # Video & social content generation routes
 │   ├── dashboard.py                   # Main overview, venture metrics, and architecture graph
@@ -78,6 +79,19 @@ mint/
 │   └── youtube_clips.py               # Viral clips generation, preview, queue, and direct publish
 │
 ├── services/                          # Business logic, integration engines, and MCP servers
+│   ├── clipping/                      # Native Autonomous Video Clipping Pipeline
+│   │   ├── __init__.py                # Package exports
+│   │   ├── video_ingestion.py         # Video download, upload, validation, and probe
+│   │   ├── transcription.py           # Faster-Whisper word-level speech transcription
+│   │   ├── transcript_analyzer.py     # NLP dialogue segmentation and topic analysis
+│   │   ├── moment_detector.py         # Viral moment detection (hooks, peaks, punchlines)
+│   │   ├── moment_ranker.py           # Engagement and viral potential scoring
+│   │   ├── scene_analyzer.py          # Visual scene cut and transition detection
+│   │   ├── smart_framing.py           # 9:16 vertical subject/face tracking and crop
+│   │   ├── caption_generator.py       # Word-level animated ASS/SRT caption synthesis
+│   │   ├── quality_checker.py         # Clip resolution, audio, and duration verification
+│   │   ├── video_renderer.py          # FFmpeg smart crop, caption burn, and final assembly
+│   │   └── clipping_pipeline.py       # End-to-end orchestration pipeline
 │   ├── ai_image_service.py            # Cloudflare Workers AI (FLUX.1 Schnell) image generation
 │   ├── ai_service.py                  # Multi-model LLM abstraction (Ollama, Gemini, Mistral)
 │   ├── cleanup_service.py             # File system and database orphan reconciler
@@ -86,7 +100,7 @@ mint/
 │   ├── digital_product_engine.py      # PDF eBook and interactive HTML guide rendering engine
 │   ├── gumroad_service.py             # Gumroad API v2 commerce integration
 │   ├── instagram_marketing_service.py # Instagram Graph API photo and carousel publisher
-│   ├── local_clipper_service.py       # Local Faster-Whisper + FFmpeg intelligent clip extractor
+│   ├── local_clipper_service.py       # Standalone Faster-Whisper + FFmpeg clip extractor
 │   ├── mcp_agent_client.py            # Client interface for MCP tool invocation
 │   ├── media_hosting_service.py       # Cloudinary HTTPS media hosting for external webhooks
 │   ├── media_service.py               # Core PIL/SVG media generation primitives
@@ -95,13 +109,11 @@ mint/
 │   ├── youtube_clipping_service.py    # YouTube source video downloader and audio extractor
 │   └── youtube_scheduler_service.py   # Twice-daily peak audience publishing scheduler
 │
-├── static/                            # Frontend assets
-│   ├── css/
-│   │   └── dashboard.css              # Neomorphic responsive design system
-│   └── js/
-│       └── dashboard.js               # Reactive client controllers, Chart.js, and polling
+├── static/                            # Frontend design system
+│   ├── css/dashboard.css              # Neomorphic responsive design system
+│   └── js/dashboard.js                # Reactive client controllers, Chart.js, and polling
 │
-├── templates/                         # Server-rendered Jinja2 UI templates
+├── templates/                         # Jinja2 UI templates
 │   ├── dashboard.html                 # Main venture operations command center
 │   ├── portfolio.html                 # Paper asset allocation and surplus dashboard
 │   ├── product_detail.html            # Individual product deliverable inspection and preview
@@ -109,16 +121,17 @@ mint/
 │   ├── studio.html                    # Creative studio for multi-scene shorts and carousels
 │   └── youtube_clips.html             # Video clipping suite, schedule queue, and player
 │
-├── tests/                             # Automated test suite
-│   └── test_engines.py                # Comprehensive end-to-end engine verification suite
+├── tests/                             # Automated test suites
+│   ├── test_engines.py                # Comprehensive end-to-end engine verification suite
+│   └── test_native_clipper.py         # Native video clipping pipeline test suite
 │
 ├── data/                              # SQLite persistence (git-ignored)
-│   └── mint.db                        # Primary relational database
+│   ├── mint.db                        # Primary relational database
+│   ├── models/                        # Cached AI models (Whisper, etc.)
+│   └── uploads/                       # User-uploaded source media
 │
 └── generated/                         # Output artifacts and media deliverables (git-ignored)
-    ├── content/
-    │   ├── youtube_clips/             # Rendered 9:16 vertical short videos
-    │   └── instagram/                 # Generated Instagram carousel slides
+    ├── content/                       # Rendered 9:16 vertical short videos & Instagram carousels
     ├── images/                        # AI-generated marketing illustrations
     └── products/                      # Compiled PDF eBooks, source Markdown, and HTML
 ```
@@ -192,9 +205,14 @@ Access the dashboard at **`http://127.0.0.1:5000`**.
 
 ## 6. Automated Testing & Verification
 
-Run the full automated test suite:
+Run the core engine test suite:
 ```powershell
 python -m pytest tests/test_engines.py -v
+```
+
+Run the native video clipping pipeline test suite:
+```powershell
+python -m pytest tests/test_native_clipper.py -v
 ```
 
 To run a consistency and reference audit on generated files and SQLite records:
