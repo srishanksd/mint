@@ -2,12 +2,11 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-
 if __name__ == "__main__":
     load_dotenv(Path(__file__).resolve().parent / ".env", override=True)
 
 from flask import Flask
-from config import SECRET_KEY, PORT, HOST
+from config import SECRET_KEY, PORT, HOST, DB_PATH
 from database import init_db
 from routes.dashboard import dashboard_bp
 from routes.experiments import experiments_bp
@@ -18,6 +17,7 @@ from routes.products import products_bp
 from routes.portfolio import portfolio_bp
 from routes.youtube_clips import youtube_clips_bp
 
+Path(DB_PATH).parent.mkdir(parents=True, exist_ok=True)
 def create_app():
     app = Flask(__name__)
     app.config["SECRET_KEY"] = SECRET_KEY

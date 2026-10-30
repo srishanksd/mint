@@ -2,7 +2,138 @@
 *Personal Autonomous Venture Operating System*
 
 MINT discovers online business opportunities, creates digital product deliverables and marketing media, measures authentic results, audits regulatory compliance, calculates net unit economics, and allocates resulting surplus into a simulated paper investment portfolio.
+---
+[DEMO Video Link](https://drive.google.com/drive/folders/1qHYv8ox8Sa3aO63r7lh2wxtJEs6se30o?usp=sharing)
+---
+[![Architecture diagram](https://gitdiagram.com/diagram-badge.svg)](https://gitdiagram.com/srishanksd/mint?utm_source=readme&utm_medium=badge)
+---
+```mermaid
+flowchart TD
 
+subgraph group_platform["Platform"]
+  node_app["Flask App<br/>app.py"]
+  node_db[("SQLite Database<br/>database.py")]
+  node_experiments_route["Experiment Routes<br/>experiments.py"]
+  node_dashboard_route["Dashboard Routes<br/>dashboard.py"]
+  node_chat_route["Chat Routes<br/>chat.py"]
+  node_chat["Contextual Assistant<br/>chat_assistant.py"]
+end
+
+subgraph group_venture["Venture Pipeline"]
+  node_orchestrator["Venture Orchestrator<br/>orchestrator.py"]
+  node_opportunity["Opportunity Scout<br/>opportunity_agent.py"]
+  node_strategy["Strategy Agent<br/>strategy_agent.py"]
+  node_creator["Marketing Creator<br/>creator_agent.py"]
+  node_quality["Compliance Checker<br/>quality_agent.py"]
+end
+
+subgraph group_products["Products & Commerce"]
+  node_product_builder["Product Builder<br/>product_builder.py"]
+  node_engine["Digital Product Engine<br/>digital_product_engine.py"]
+  node_gumroad["Gumroad Commerce<br/>gumroad_service.py"]
+end
+
+subgraph group_media["Media & Publishing"]
+  node_content["Content Studio<br/>content_service.py"]
+  node_social["Social Publisher<br/>social_service.py"]
+  node_youtube_auth["YouTube OAuth<br/>youtube_auth.py"]
+  node_clips_route["Clips Routes<br/>youtube_clips.py"]
+  node_clips_agent["Clips Agent<br/>youtube_clips_agent.py"]
+  node_local_clipper["Local Clipper<br/>local_clipper_service.py"]
+  node_scheduler["YouTube Scheduler<br/>youtube_scheduler_service.py"]
+end
+
+subgraph group_insight["Measurement & Allocation"]
+  node_measurement["Measurement Agent<br/>measurement_agent.py"]
+  node_finance["Finance Agent<br/>finance_agent.py"]
+  node_portfolio["Paper Portfolio<br/>portfolio_manager.py"]
+end
+
+node_user(("MINT User"))
+node_external_ai{{"AI Providers"}}
+node_social_platforms{{"Social Platforms"}}
+node_gumroad_external{{"Gumroad API"}}
+node_openshorts{{"OpenShorts MCP"}}
+
+node_user -->|"Uses"| node_app
+node_app -->|"Initializes"| node_db
+node_app -->|"Registers"| node_experiments_route
+node_app -->|"Registers"| node_dashboard_route
+node_app -->|"Registers"| node_chat_route
+node_app -->|"Registers"| node_clips_route
+
+node_experiments_route -->|"Starts experiment"| node_orchestrator
+
+node_orchestrator -->|"Discovers candidates"| node_opportunity
+node_orchestrator -->|"Selects strategy"| node_strategy
+node_orchestrator -->|"Creates promotion"| node_creator
+node_orchestrator -->|"Builds deliverable"| node_product_builder
+node_orchestrator -->|"Audits deliverable"| node_quality
+node_orchestrator -->|"Measures funnel"| node_measurement
+node_orchestrator -->|"Reconciles finances"| node_finance
+node_orchestrator -->|"Allocates surplus"| node_portfolio
+
+node_product_builder -->|"Renders product"| node_engine
+node_engine -->|"Generates content"| node_external_ai
+node_engine -->|"Syncs catalog"| node_gumroad
+node_gumroad -->|"Uses commerce API"| node_gumroad_external
+
+node_creator -.->|"Creates media"| node_content
+node_content -->|"Publishes media"| node_social
+node_social -->|"Publishes to"| node_social_platforms
+node_youtube_auth -->|"Provides OAuth tokens"| node_social
+
+node_clips_route -->|"Runs clipping"| node_clips_agent
+node_clips_agent -->|"Renders local clips"| node_local_clipper
+node_clips_agent -->|"Queues publishing"| node_scheduler
+node_clips_agent -->|"Invokes MCP tools"| node_openshorts
+
+node_chat_route -->|"Handles chat"| node_chat
+node_chat -->|"Reads live context"| node_db
+node_chat -->|"Requests reasoning"| node_external_ai
+
+node_measurement -->|"Reads events"| node_db
+node_finance -->|"Reads ledger"| node_db
+node_portfolio -.->|"Records allocation"| node_db
+node_dashboard_route -->|"Reads metrics"| node_db
+
+click node_app "https://github.com/srishanksd/mint/blob/main/app.py"
+click node_db "https://github.com/srishanksd/mint/blob/main/database.py"
+click node_experiments_route "https://github.com/srishanksd/mint/blob/main/routes/experiments.py"
+click node_dashboard_route "https://github.com/srishanksd/mint/blob/main/routes/dashboard.py"
+click node_chat_route "https://github.com/srishanksd/mint/blob/main/routes/chat.py"
+click node_chat "https://github.com/srishanksd/mint/blob/main/agents/chat_assistant.py"
+click node_orchestrator "https://github.com/srishanksd/mint/blob/main/agents/orchestrator.py"
+click node_opportunity "https://github.com/srishanksd/mint/blob/main/agents/opportunity_agent.py"
+click node_strategy "https://github.com/srishanksd/mint/blob/main/agents/strategy_agent.py"
+click node_creator "https://github.com/srishanksd/mint/blob/main/agents/creator_agent.py"
+click node_product_builder "https://github.com/srishanksd/mint/blob/main/agents/product_builder.py"
+click node_engine "https://github.com/srishanksd/mint/blob/main/services/digital_product_engine.py"
+click node_quality "https://github.com/srishanksd/mint/blob/main/agents/quality_agent.py"
+click node_gumroad "https://github.com/srishanksd/mint/blob/main/services/gumroad_service.py"
+click node_content "https://github.com/srishanksd/mint/blob/main/services/content_service.py"
+click node_social "https://github.com/srishanksd/mint/blob/main/services/social_service.py"
+click node_youtube_auth "https://github.com/srishanksd/mint/blob/main/routes/youtube_auth.py"
+click node_clips_route "https://github.com/srishanksd/mint/blob/main/routes/youtube_clips.py"
+click node_clips_agent "https://github.com/srishanksd/mint/blob/main/agents/youtube_clips_agent.py"
+click node_local_clipper "https://github.com/srishanksd/mint/blob/main/services/local_clipper_service.py"
+click node_scheduler "https://github.com/srishanksd/mint/blob/main/services/youtube_scheduler_service.py"
+click node_measurement "https://github.com/srishanksd/mint/blob/main/agents/measurement_agent.py"
+click node_finance "https://github.com/srishanksd/mint/blob/main/agents/finance_agent.py"
+click node_portfolio "https://github.com/srishanksd/mint/blob/main/agents/portfolio_manager.py"
+
+classDef toneBlue fill:#dbeafe,stroke:#2563eb,stroke-width:1.5px,color:#172554
+classDef toneAmber fill:#fef3c7,stroke:#d97706,stroke-width:1.5px,color:#78350f
+classDef toneMint fill:#dcfce7,stroke:#16a34a,stroke-width:1.5px,color:#14532d
+classDef toneRose fill:#ffe4e6,stroke:#e11d48,stroke-width:1.5px,color:#881337
+classDef toneIndigo fill:#e0e7ff,stroke:#4f46e5,stroke-width:1.5px,color:#312e81
+
+class node_app,node_db,node_experiments_route,node_dashboard_route,node_chat_route,node_chat,node_user toneBlue
+class node_orchestrator,node_opportunity,node_strategy,node_creator,node_quality toneAmber
+class node_product_builder,node_engine,node_gumroad toneMint
+class node_content,node_social,node_youtube_auth,node_clips_route,node_clips_agent,node_local_clipper,node_scheduler toneRose
+class node_measurement,node_finance,node_portfolio,node_external_ai,node_social_platforms,node_gumroad_external,node_openshorts toneIndigo
+```
 ---
 
 ## 1. Traceability & Metric Source Integrity (Zero-Fabrication Policy)
