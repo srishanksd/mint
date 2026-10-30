@@ -26,6 +26,7 @@ from database import get_db_connection, log_activity
 from services.clipper_mcp_client import ClipperMCPClient
 from services.local_clipper_service import LocalClipperService
 from services.youtube_clipping_service import YouTubeClippingService
+from services.clipping.clipping_pipeline import ClippingPipeline
 from routes.youtube_auth import _load_token, _refresh_if_needed, _build_youtube_client
 
 logger = logging.getLogger(__name__)
@@ -302,12 +303,17 @@ class YouTubeClipsAgent:
         start_time: Optional[float] = None,
         end_time: Optional[float] = None,
         provider: str = "openshorts_mcp",
-        is_test: int = 0
+        is_test: int = 0,
+        num_clips: int = 2,
+        min_duration: float = 20.0,
+        max_duration: float = 55.0,
+        framing_mode: str = "zoom_crop",
+        caption_style: str = "beast"
     ) -> Dict[str, Any]:
         """
         Submits a video to OpenShorts MCP server or executes Free Local Clipping via faster-whisper and FFmpeg.
         Enforces:
-        1. Choice between 'openshorts_mcp' and 'local_free'
+        1. Choice between 'native_engine', 'local_free', and 'openshorts_mcp'
         2. Prevention of duplicate project submissions
         3. Persistence in openshorts_jobs SQLite table
         """
@@ -332,6 +338,35 @@ class YouTubeClipsAgent:
         vid_match = re.search(r"(?:v=|\/|youtu\.be\/)([A-Za-z0-9_-]{11})", video_url)
         video_id = vid_match.group(1) if vid_match else None
 
+        # Automatic provider selection: canonical native engine for 100% local processing
+        data_provider_was_auto = provider == "auto"
+        if data_provider_was_auto:
+            provider = "native_engine"
+
+        # Provider C: Native ChronoForge Clipping Engine (100% local, multi-clip, Faster-Whisper, ASS subtitles)
+        if provider == "native_engine":
+            if video_id or raw.startswith("http://") or raw.startswith("https://"):
+                return ClippingPipeline.process_video_job(
+                    source=video_url,
+                    is_url=True,
+                    video_title=video_title or "",
+                    channel_name=source_channel_name or "YouTube Source",
+                    channel_id=source_channel_id or "youtube",
+                    start_time=start_time,
+                    end_time=end_time,
+                    num_clips=num_clips,
+                    min_duration=min_duration,
+                    max_duration=max_duration,
+                    framing_mode=framing_mode,
+                    caption_style=caption_style,
+                    is_test=is_test
+                )
+            return {
+                "success": False,
+                "status": "needs_source",
+                "error": "Native engine requires a valid video URL or file path."
+            }
+
         # Provider B: Free Local Clipping (autonomous AI timeline discovery & targeted download)
         if provider == "local_free":
             if video_id or raw.startswith("http://") or raw.startswith("https://"):
@@ -352,15 +387,28 @@ class YouTubeClipsAgent:
 
         # Provider A: OpenShorts MCP
         mcp_res = ClipperMCPClient.process_video(
-            video_url=video_url,
-            source_type="YOUTUBE",
-            target_duration=60,
-            start_time=start_time,
-            end_time=end_time
+            source_url=video_url,
+            confirm_rights=True,
+            auto_hook=True,
+            captions=True
         )
 
         if not mcp_res.get("success"):
-            # Return real MCP failure; never fabricate a replacement clip
+            # Automatic mode falls back to the local clipper if OpenShorts cannot accept the job.
+            if data_provider_was_auto:
+                local_res = LocalClipperService.create_clip_from_youtube_url(
+                    video_url=video_url,
+                    video_title=video_title or "",
+                    channel_name=source_channel_name or "YouTube Source",
+                    channel_id=source_channel_id or "youtube",
+                    rights_confirmed=True,
+                    start_time=start_time,
+                    end_time=end_time
+                )
+                if local_res.get("success"):
+                    local_res["provider"] = "local_free"
+                    local_res["fallback_reason"] = mcp_res.get("error", "OpenShorts was unavailable.")
+                return local_res
             return {
                 "success": False,
                 "status": mcp_res.get("status", "failed"),

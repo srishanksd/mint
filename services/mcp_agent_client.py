@@ -82,9 +82,11 @@ class MCPAgentClient:
         if tool_name in ["process_video", "get_job_status", "list_clips", "get_quota", "add_subtitles", "recut_clip"]:
             if tool_name == "process_video":
                 res = ClipperMCPClient.process_video(
-                    args.get("video_url", ""),
-                    source_type=args.get("source_type", "YOUTUBE"),
-                    target_duration=args.get("target_duration", 60)
+                    source_url=args.get("source_url", args.get("video_url", "")),
+                    upload_id=args.get("upload_id"),
+                    auto_hook=args.get("auto_hook", True),
+                    captions=args.get("captions", True),
+                    confirm_rights=args.get("confirm_rights", True)
                 )
             elif tool_name == "get_job_status":
                 res = ClipperMCPClient.get_job_status(args.get("job_id", ""))
