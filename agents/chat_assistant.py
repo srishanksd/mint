@@ -14,12 +14,13 @@ from services.ai_service import AIService
 from services.mcp_agent_client import MCPAgentClient
 from agents.quality_agent import QualityCheckerAgent
 from agents.context_builder import build_context
+from services.chroma_service import query_activities, get_recent_activities
 
 
 def _build_operational_answer(ctx: dict, text: str) -> str:
     """
-    Deterministic operational answer generator based strictly on current SQLite records.
-    Used when no external LLM is configured or as fallback.
+    Intelligent operational answer generator based on live SQLite records + ChromaDB semantic memory.
+    Answers real questions directly without generic filler or random replies.
     """
     lower = text.lower()
     integrations = ctx.get("integrations", {})
@@ -32,168 +33,90 @@ def _build_operational_answer(ctx: dict, text: str) -> str:
     assets = ctx.get("venture_assets", {})
     prods = assets.get("recent_products", [])
     prod_cnt = assets.get("digital_products_count", 0)
-    aff_cnt = assets.get("affiliate_offers_count", 0)
-    aff_clicks = assets.get("affiliate_clicks", 0)
-    aff_earned = assets.get("affiliate_earned", 0.0)
     img_cnt = assets.get("image_assets_count", 0)
     yt_clips_cnt = assets.get("youtube_clips_count", 0)
     yt_sched = assets.get("youtube_schedule", {})
 
-    # 1. Cloudflare Workers AI Image Generation inquiry
-    if any(w in lower for w in ["image", "flux", "cloudflare", "photo", "picture"]):
-        configured = ai_img.get("configured", False)
-        model = ai_img.get("model", "@cf/black-forest-labs/flux-1-schnell")
-        if configured:
-            return (
-                f"Image Generation is configured with Cloudflare Workers AI ({model}) on the free daily allocation "
-                f"(10,000 neurons/day). Total generated image assets in database: {img_cnt}. "
-                "You can generate standalone images in Mode B or create product marketing graphics in Mode A."
-            )
+    # Check ChromaDB memory first for relevant context
+    chroma_matches = query_activities(text, n_results=3)
+    memory_context = ""
+    if chroma_matches:
+        mem_snippets = [f"- {m['document']}" for m in chroma_matches[:3]]
+        memory_context = "\nRelevant System Memory (ChromaDB):\n" + "\n".join(mem_snippets)
+
+    # 1. Video clipping / YouTube inquiries
+    if any(w in lower for w in ["clip", "video", "youtube", "shorts", "render"]):
+        conn = get_db_connection()
+        clips = [dict(r) for r in conn.execute("SELECT clip_title, status, duration_sec, output_path, youtube_video_url, created_at FROM youtube_clips ORDER BY id DESC LIMIT 5").fetchall()]
+        conn.close()
+        
+        reply_lines = [f"YouTube Clips System (Native Faster-Whisper + 9:16 Zoom-Crop Renderer):"]
+        reply_lines.append(f"• Total clips cataloged: {yt_clips_cnt}")
+        reply_lines.append(f"• YouTube connection: {'Connected (' + str(yt.get('channel_name') or 'Channel') + ')' if yt.get('connected') else 'OAuth not connected'}")
+        if clips:
+            reply_lines.append("\nRecent Clips Generated:")
+            for c in clips[:4]:
+                link_str = f" [Watch: {c['youtube_video_url']}]" if c.get('youtube_video_url') else " [Local File]"
+                reply_lines.append(f"• \"{c.get('clip_title')}\" ({c.get('status')}, {c.get('duration_sec', 0)}s){link_str}")
+        return "\n".join(reply_lines)
+
+    # 2. Digital Products inquiries
+    if any(w in lower for w in ["product", "catalog", "guide", "ebook", "template", "deliverable"]):
+        conn = get_db_connection()
+        products = [dict(r) for r in conn.execute("SELECT title, price, product_type, audience, status FROM digital_products ORDER BY id DESC LIMIT 5").fetchall()]
+        conn.close()
+
+        lines = [f"Digital Products Catalog:"]
+        lines.append(f"• Total products created: {prod_cnt}")
+        if products:
+            lines.append("Recent products:")
+            for p in products:
+                lines.append(f"• \"{p.get('title')}\" (${p.get('price', 0):.2f}, {p.get('product_type')}, Status: {p.get('status')})")
+        return "\n".join(lines)
+
+    # 3. Revenue, profit, orders, financial metrics
+    if any(w in lower for w in ["money", "revenue", "profit", "order", "sales", "gross", "financial", "cash"]):
+        fin = ctx.get("finance") or {}
+        orders = ctx.get("orders") or {}
+        gross = float(fin.get("gross_revenue", 0.0) or orders.get("real_gross", 0.0))
+        net = float(fin.get("net_profit", 0.0))
+        res = float(fin.get("required_reserve", 0.0))
         return (
-            f"Cloudflare Workers AI image generation is not configured ({ai_img.get('message')}). "
-            "To enable free image generation, configure CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN in your .env file."
+            f"Financial Accounting Summary:\n"
+            f"• Real Customer Revenue: ${gross:.2f}\n"
+            f"• Net Operating Profit: ${net:.2f}\n"
+            f"• Compulsory 25% Reserve: ${res:.2f}\n"
+            f"• Orders: {orders.get('real_completed', 0)} real customer transactions."
         )
 
-    # 2. YouTube clipping and twice-daily schedule inquiry
-    if any(w in lower for w in ["youtube", "clip", "schedule", "shorts"]):
-        connected = yt.get("connected", False)
-        ch_name = yt.get("channel_name") or "Authorized Channel"
-        sched_enabled = bool(yt_sched.get("enabled", 0))
-        slot1 = yt_sched.get("slot_1_time", "10:00")
-        slot2 = yt_sched.get("slot_2_time", "18:00")
-        tz = yt_sched.get("timezone", "UTC")
-        timing_source = yt_sched.get("audience_timing_source", "user_configured_studio")
+    # 4. Activity history / what happened / memory search
+    if any(w in lower for w in ["activity", "history", "what happened", "recent", "log", "chroma", "memory"]):
+        recent = get_recent_activities(limit=5)
+        if recent:
+            items_str = "\n".join([f"• [{r.get('timestamp')}] {r.get('document')}" for r in recent])
+            return f"Most Recent Important System Activities (Indexed in ChromaDB):\n{items_str}"
+        return "No activities recorded in memory yet."
 
-        if connected:
-            sched_status = f"Active ({slot1} and {slot2} {tz}, source: {timing_source})" if sched_enabled else "Paused/Disabled"
-            return (
-                f"YouTube is connected as '{ch_name}'. Total clips rendered: {yt_clips_cnt}. "
-                f"Twice-Daily Posting Schedule: {sched_status}. "
-                "Clips are uploaded with status.publishAt set to future slots as private, becoming public automatically at the scheduled time."
-            )
-        return (
-            "YouTube is not connected. Open the dashboard and click 'Connect YouTube' to complete "
-            "the official Google OAuth 2.0 authorization flow. Clips can be cut from authorized source media."
-        )
-
-    # 3. Public Media Hosting inquiry
-    if any(w in lower for w in ["media hosting", "hosting", "cloudinary", "cdn"]):
-        if media_host.get("configured"):
-            return f"Public HTTPS Media Hosting is ready via {media_host.get('provider_label')}. Meta Graph API can download your images for Instagram publishing."
-        return (
-            f"Public HTTPS Media Hosting is not configured ({media_host.get('message')}). "
-            "Meta Graph API cannot access files from localhost. Configure Cloudinary credentials in .env to enable Instagram publishing."
-        )
-
-    # 4. Gumroad specific inquiry
-    if "gumroad" in lower:
-        if gum.get("connected"):
-            user_info = gum.get("user", {})
-            user_name = user_info.get("name") or user_info.get("email") or "Authorized User"
-            prod_summary = []
-            for p in prods[:3]:
-                sync_st = p.get("gumroad_sync_status", "not_synced")
-                att_st = p.get("gumroad_attachment_status", "missing")
-                prod_summary.append(f"'{p.get('title')}' ({sync_st}, attachment: {att_st})")
-            prods_text = "; ".join(prod_summary) if prod_summary else "No catalog products currently synced."
-            return (
-                f"Gumroad is connected as {user_name}. Auto-publish: {gum.get('auto_publish')}.\n"
-                f"Recent products: {prods_text}.\n"
-                f"Note: Local PDF deliverables must be manually attached via Gumroad Product Editor unless verified."
-            )
-        return (
-            f"Gumroad is not connected ({gum.get('message', 'No access token')}). "
-            "To connect Gumroad, add GUMROAD_ACCESS_TOKEN to your .env file."
-        )
-
-    # 5. Instagram specific inquiry
+    # 5. Instagram inquiries
     if "instagram" in lower or "meta" in lower:
         status = ig.get("status", "not_configured")
         if status == "connected":
-            return (
-                f"Instagram is connected as @{ig.get('username')} ({ig.get('account_type')}). "
-                "Publishing is enabled. Public HTTPS media hosting is configured for Meta crawler access."
-            )
-        elif status == "permission_error" or ig.get("error_code") == 200:
-            return (
-                f"Instagram connection issue: Meta API access blocked (OAuthException code 200). "
-                "Root cause: Your Meta Developer App is in Development mode or has restricted API access. "
-                "Actionable steps: 1) Switch your Meta App to Live Mode or add your Facebook User to App Roles (Roles -> Testers/Developers) at developers.facebook.com; "
-                "2) Verify 'instagram_content_publish' permission is approved; "
-                "3) Public HTTPS media hosting is active via Cloudinary."
-            )
-        elif status == "not_configured":
-            return (
-                "Instagram is not configured. Missing INSTAGRAM_ACCOUNT_ID or INSTAGRAM_ACCESS_TOKEN in .env. "
-                "Add your Page token with instagram_content_publish scope to enable publishing."
-            )
-        return f"Instagram status: {status} ({ig.get('message')})"
+            return f"Instagram Meta Graph is connected as @{ig.get('username')} ({ig.get('account_type')}). Publishing is ready."
+        return f"Instagram status: {status} ({ig.get('message', 'Unconfigured')}). Local video files require a public HTTPS media hosting URL."
 
-    # 6. Digital Products catalog inquiry
-    if any(w in lower for w in ["product", "catalog", "deliverable", "guide"]):
-        return (
-            f"MINT currently has {prod_cnt} real digital products in the catalog. "
-            "Products are generated using Chromium PDF rendering and synced with Gumroad for instant automated fulfillment."
-        )
+    # If query matches ChromaDB memory well, return memory answer
+    if chroma_matches:
+        top_doc = chroma_matches[0]["document"]
+        return f"According to your system records:\n{top_doc}\n{memory_context}"
 
-    # 7. If experiment is required for operational answer but missing
-    if not ctx.get("has_experiment"):
-        return (
-            "No active experiments found in SQLite. "
-            "Click 'Launch Venture Run' on the dashboard to start your first venture run. "
-            f"System status: Products ({prod_cnt}), Images ({img_cnt}), Clips ({yt_clips_cnt}), "
-            f"YouTube {'connected' if yt.get('connected') else 'disconnected'}, Instagram {ig.get('status', 'not configured')}."
-        )
-
-    exp = ctx.get("experiment", {})
-    fin = ctx.get("finance") or {}
-    traf = ctx.get("traffic") or {}
-    orders = ctx.get("orders") or {}
-    art = ctx.get("artifact") or {}
-    opp = ctx.get("selected_opportunity") or {}
-    runs = ctx.get("agent_runs", [])
-
-    # Blocker / failure question
-    if any(w in lower for w in ["fail", "error", "block", "problem", "wrong"]):
-        failed_agents = [r for r in runs if r.get("status") in ("failed", "interrupted")]
-        if failed_agents:
-            details = "; ".join([f"{r['agent_name']}: {r.get('warning_or_error') or r.get('status')}" for r in failed_agents])
-            return f"Current run has issues: {details}. Inspect the node in the pipeline."
-        if exp.get("status") == "interrupted":
-            return f"Experiment #{exp.get('id')} was interrupted while agents were running."
-        return f"Current experiment #{exp.get('id')} has status '{exp.get('status')}'. No unhandled errors or blockers are currently flagged."
-
-    # Next action / what now
-    if any(w in lower for w in ["next", "now", "action", "do", "should"]):
-        action = exp.get("recommended_action") or "Awaiting evaluation"
-        traffic_views = traf.get("views", 0)
-        advice = [f"System recommendation: {action}"]
-        if traffic_views < 25:
-            advice.append(f"Traffic sample size is low ({traffic_views} views). Generate additional promo posts in Content Studio to build signal.")
-        if art.get("video_available") and yt.get("connected"):
-            advice.append("Video artifact is rendered. Consider queueing a clip for YouTube Shorts.")
-        if fin.get("surplus_available", 0) > 0:
-            advice.append(f"Review paper portfolio surplus allocation (${fin.get('surplus_available'):.2f} available).")
-        return "\n".join(advice)
-
-    # Status / Progress summary
-    budget_limit = exp.get("budget_limit", 0.0)
-    budget_used = exp.get("budget_used", 0.0) or 0.0
-    budget_pct = round((budget_used / budget_limit * 100), 1) if budget_limit > 0 else 0
-    active_runs = [r["agent_name"] for r in runs if r.get("status") == "running"]
-    completed_runs = len([r for r in runs if r.get("status") == "completed"])
-
+    # General overview
     return (
-        f"Experiment #{exp.get('id')} ('{exp.get('name')}') is currently {exp.get('status').upper()}. "
-        f"Objective: '{exp.get('goal')}'.\n\n"
-        f"• Strategy & Opportunity: Model is '{exp.get('business_model')}' targeting '{exp.get('target_audience')}'. "
-        f"Selected concept: '{opp.get('title', 'Pending')}' (Confidence: {opp.get('confidence', 'unverified')}).\n"
-        f"• Execution: {completed_runs}/9 agent steps completed. Budget cap: ${budget_limit:.2f} (used: ${budget_used:.2f}, {budget_pct}%).\n"
-        f"• Deliverable: {art.get('title', 'Not yet rendered')} ({'Video Ready' if art.get('video_available') else 'No video'}).\n"
-        f"• Performance & Traffic: {traf.get('views', 0)} verified views, {traf.get('clicks', 0)} clicks ({traf.get('ctr_pct', 0.0)}% CTR, {traf.get('data_quality')}). "
-        f"Orders: {orders.get('real_completed', 0)} real (${orders.get('real_gross', 0.0):.2f}) and {orders.get('test_orders', 0)} sandbox orders.\n"
-        f"• Accounting: Net profit ${fin.get('net_profit', 0.0):.2f}, 25% reserve locked: ${fin.get('required_reserve', 0.0):.2f}, paper surplus: ${fin.get('surplus_available', 0.0):.2f}.\n"
-        f"• Integrations: YouTube {'connected' if yt.get('connected') else 'not connected'}; Instagram {ig.get('status', 'not configured')}."
+        f"MINT Personal Control Assistant ready.\n"
+        f"• Clips: {yt_clips_cnt} created (Faster-Whisper & 9:16 renderer ready)\n"
+        f"• Products: {prod_cnt} available in catalog\n"
+        f"• YouTube: {'Connected' if yt.get('connected') else 'Disconnected'}\n"
+        f"• ChromaDB Memory: Active & indexing all actions\n"
+        f"Ask me about any video clip, product, past activity, or platform integration."
     )
 
 
