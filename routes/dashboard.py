@@ -308,3 +308,17 @@ def system_audit():
     """Returns dry-run reference audit and consistency inventory across database and disk."""
     from services.cleanup_service import CleanupService
     return jsonify(CleanupService.get_inventory())
+
+
+@dashboard_bp.route("/api/chroma/activities")
+def get_chroma_activities():
+    """Returns recent activities or performs semantic query on ChromaDB memory."""
+    from services.chroma_service import get_recent_activities, query_activities
+    q = request.args.get("q")
+    limit = int(request.args.get("limit", 15))
+    if q:
+        items = query_activities(q, n_results=limit)
+    else:
+        items = get_recent_activities(limit=limit)
+    return jsonify({"activities": items, "count": len(items)})
+
