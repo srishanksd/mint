@@ -24,6 +24,8 @@ data/*.db
 data/*.db-shm
 data/*.db-wal
 data/backups/
+data/models/
+data/uploads/
 
 # Generated Venture Deliverables (media & products)
 generated/videos/*
@@ -35,3 +37,4 @@ generated/products/*
 
 generated/content/*
 !generated/content/.gitkeep
+
