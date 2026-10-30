@@ -60,11 +60,11 @@ function applyTheme(theme) {
   }
   if (icon && text) {
     if (isDark) {
-      icon.innerText = "☀️";
-      text.innerText = "Light Mode";
+      icon.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`;
+      text.innerText = "Light";
     } else {
-      icon.innerText = "🌙";
-      text.innerText = "Dark Mode";
+      icon.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`;
+      text.innerText = "Dark";
     }
   }
 
@@ -183,9 +183,13 @@ async function fetchOverview() {
       } else {
         btnVid.style.display = "none";
       }
-      if (meta.deliverable) {
-        const pkgName = meta.deliverable.split("\\").pop().split("/").pop();
-        btnPkg.href = `/api/media/products/${pkgName}`;
+      if (meta.deliverable || meta.product_slug) {
+        if (meta.product_slug) {
+          btnPkg.href = `/products/${encodeURIComponent(meta.product_slug)}/download`;
+        } else {
+          const pkgName = meta.deliverable.split("\\").pop().split("/").pop();
+          btnPkg.href = `/api/media/products/${pkgName}`;
+        }
         btnPkg.style.display = "inline-block";
       } else {
         btnPkg.style.display = "none";
@@ -196,7 +200,16 @@ async function fetchOverview() {
     if (data.portfolio && data.portfolio.allocations) {
       document.getElementById("card-portfolio").style.display = "block";
       document.getElementById("port-profile-label").innerText = `Profile: ${data.portfolio.risk_profile} ($${data.portfolio.total_surplus} surplus)`;
-      renderPortfolio(data.portfolio.allocations);
+      // Defer rendering portfolio until Chart.js is confirmed loaded
+      if (typeof Chart !== "undefined") {
+        renderPortfolio(data.portfolio.allocations);
+      } else {
+        setTimeout(() => {
+          if (typeof Chart !== "undefined") {
+            renderPortfolio(data.portfolio.allocations);
+          }
+        }, 300);
+      }
     }
 
     // Activity Feed
@@ -339,34 +352,93 @@ function updateExecutionBanner(exp, prog, recentEvents) {
   if (barEl) barEl.style.width = `${prog.progress_pct}%`;
   if (taskEl) taskEl.innerText = prog.current_task ? `Active: ${prog.current_task.slice(0, 70)}` : "All pipeline stages finished.";
   
+  // Update Executive Stepper active highlights
+  const stages = [
+    document.getElementById("step-stage-1"),
+    document.getElementById("step-stage-2"),
+    document.getElementById("step-stage-3"),
+    document.getElementById("step-stage-4")
+  ];
+  const completed = Number(prog.completed_stages || 0);
+  const isCompleted = exp.status === "completed";
+
+  stages.forEach((step, idx) => {
+    if (!step) return;
+    step.classList.remove("active", "completed");
+    // stage index 0: nodes 1-3 (Scout, Strategy, Orchestrator)
+    // stage index 1: nodes 4-5 (Content Creator, Quality Checker)
+    // stage index 2: nodes 6-7 (Publishing, Measurement)
+    // stage index 3: nodes 8-9 (Finance, Portfolio)
+    const stageThresholds = [3, 5, 7, 9];
+    if (isCompleted || completed >= stageThresholds[idx]) {
+      step.classList.add("completed");
+    } else if (
+      (idx === 0 && completed < 3) ||
+      (idx === 1 && completed >= 3 && completed < 5) ||
+      (idx === 2 && completed >= 5 && completed < 7) ||
+      (idx === 3 && completed >= 7 && completed < 9)
+    ) {
+      if (exp.status === "running") {
+        step.classList.add("active");
+      }
+    }
+  });
+
   if (eventEl && recentEvents && recentEvents.length > 0) {
     const latest = recentEvents[0];
     eventEl.innerText = `Latest: [${latest.agent_name}] ${latest.message.slice(0, 45)}`;
   }
 }
 
-/* Render Activity Feed with Semantic Classes */
-function renderActivityFeed(events) {
+/* Render ChromaDB Important Activity Feed */
+async function loadChromaActivities() {
   const feedContainer = document.getElementById("activity-feed");
   if (!feedContainer) return;
 
-  if (!events || events.length === 0) {
-    feedContainer.innerHTML = `
-      <div style="text-align:center; padding:28px 16px; color:var(--text-muted); font-size:12.5px;">
-        No activity events recorded yet. Launch a venture run to observe live execution.
-      </div>
-    `;
-    return;
-  }
+  try {
+    const res = await fetch("/api/chroma/activities?limit=15");
+    const data = await res.json();
+    const items = data.activities || [];
 
-  feedContainer.innerHTML = events.map(item => `
-    <div class="feed-item ${escapeHtml(item.severity || 'info')}">
-      <div>
-        <strong>${escapeHtml(item.agent_name)}:</strong> ${escapeHtml(item.message)}
-      </div>
-      <div class="feed-time">${escapeHtml(item.timestamp.split(" ")[1] || item.timestamp)}</div>
-    </div>
-  `).join("");
+    if (items.length === 0) {
+      feedContainer.innerHTML = `
+        <div style="text-align:center; padding:28px 16px; color:var(--text-muted); font-size:14px;">
+          No activities indexed in ChromaDB yet. Generate clips or products to build memory.
+        </div>
+      `;
+      return;
+    }
+
+    feedContainer.innerHTML = items.map(item => {
+      const cat = escapeHtml(item.category || "activity");
+      const title = escapeHtml(item.title || "Event");
+      const ts = escapeHtml(item.timestamp || "");
+      const doc = escapeHtml(item.document || "");
+      const isVideo = cat.includes("clip") || cat.includes("youtube");
+      const isProd = cat.includes("product");
+      const typeLabel = isVideo ? "CLIP" : (isProd ? "PRODUCT" : "EVENT");
+
+      return `
+        <div class="feed-item info" style="padding:10px 12px; margin-bottom:8px; border-radius:8px; background:var(--surface-nested); border:1px solid var(--border-subtle); display:block;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:10px; font-weight:700; letter-spacing:0.5px; background:var(--surface-inset); color:var(--text-muted); padding:2px 6px; border-radius:4px; border:1px solid var(--border-subtle);">${typeLabel}</span>
+              <strong style="font-size:13.5px; color:var(--text-primary);">${title}</strong>
+            </div>
+            <span class="feed-time" style="font-size:11.5px; color:var(--text-subtle);">${ts.split(" ")[1] || ts}</span>
+          </div>
+          <div style="font-size:12.5px; color:var(--text-secondary); line-height:1.45; word-break:break-word;">${doc}</div>
+        </div>
+      `;
+    }).join("");
+  } catch (err) {
+    console.warn("loadChromaActivities error:", err);
+  }
+}
+
+function renderActivityFeed(events) {
+  // Defer to ChromaDB real persistent memory
+  loadChromaActivities();
 }
 
 /* External Platform Integrations UI */
