@@ -168,6 +168,7 @@ MINT does not invent numbers. Every displayed business metric has a traceable or
 11. **`Portfolio Manager`** (`agents/portfolio_manager.py`): Partitions eligible surplus into paper asset classes (Conservative, Balanced, Growth) with exact monetary and percentage reconciliation.
 12. **`Context Builder & In-Dashboard Chat`** (`agents/context_builder.py`, `agents/chat_assistant.py`): Feeds live database metrics directly to conversational reasoning with zero hallucinations.
 13. **`Venture Control MCP Server & Clients`** (`services/mint_mcp_server.py`, `services/mcp_agent_client.py`, `services/clipper_mcp_client.py`): Native Model Context Protocol (MCP) server exposing operational venture control tools to external AI clients with persistent SQLite audit logs in `mcp_audit_logs`.
+14. **`ChromaDB Semantic Memory & Activity Engine`** (`services/chroma_service.py`): Embedded persistent vector database that indexes generated video clips, digital products, pipeline milestones, and operational actions to empower contextual AI consultation with semantic memory search.
 
 ---
 
@@ -225,6 +226,7 @@ mint/
 │   │   └── clipping_pipeline.py       # End-to-end orchestration pipeline
 │   ├── ai_image_service.py            # Cloudflare Workers AI (FLUX.1 Schnell) image generation
 │   ├── ai_service.py                  # Multi-model LLM abstraction (Ollama, Gemini, Mistral)
+│   ├── chroma_service.py              # ChromaDB vector store for semantic memory and activity indexing
 │   ├── cleanup_service.py             # File system and database orphan reconciler
 │   ├── clipper_mcp_client.py          # OpenShorts MCP tool integration client
 │   ├── content_service.py             # Multi-scene video synthesis via FFmpeg + Pillow
@@ -259,6 +261,7 @@ mint/
 ├── data/                              # SQLite persistence (git-ignored)
 │   ├── mint.db                        # Primary relational database
 │   ├── models/                        # Cached AI models (Whisper, etc.)
+│   ├── chroma/                        # ChromaDB persistent vector database (git-ignored)
 │   └── uploads/                       # User-uploaded source media
 │
 └── generated/                         # Output artifacts and media deliverables (git-ignored)
