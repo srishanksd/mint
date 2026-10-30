@@ -145,21 +145,13 @@
     <div class="metric-box">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
         <span style="font-size:15.5px; font-weight:500; color:var(--text-muted);">Clipper Engine</span>
-        {% if openshorts and openshorts.server_running %}
-          <span class="status-pill-minimal pill-connected">OpenShorts MCP</span>
-        {% else %}
-          <span class="status-pill-minimal pill-connected">Local Free</span>
-        {% endif %}
+        <span class="status-pill-minimal pill-connected" style="background:#dcfce7; color:#15803d; font-weight:700;">Native Local AI</span>
       </div>
       <div class="metric-value" style="font-size:18.5px">
-        {% if openshorts and openshorts.server_running %}
-          OpenShorts MCP <span style="font-size:15px; font-weight:400; color:var(--text-muted);">(Port 8000)</span>
-        {% else %}
-          Free Local Clipper
-        {% endif %}
+        Native Engine (9:16)
       </div>
       <div style="font-size:15px; color:var(--text-muted); margin-top:4px;">
-        Engine: <strong>faster-whisper + FFmpeg (9:16)</strong>
+        Engine: <strong>faster-whisper + Ollama/Local + FFmpeg</strong>
       </div>
     </div>
 
@@ -198,7 +190,127 @@
     </div>
   </div>
 
+  <!-- ⚡ Native AI Video Clipper (Direct URL & File Ingestion) -->
+  <div class="neo-card" style="margin-bottom:24px; border: 1.5px solid #6366f1; background: linear-gradient(135deg, var(--surface-pure) 0%, var(--surface-nested) 100%);">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span class="step-badge" style="background:#4f46e5; color:#ffffff;">AI</span>
+        <h2 style="font-size:19px; font-weight:700; color:var(--text-primary); margin:0;">Native AI Video Clipper</h2>
+        <span class="status-pill-minimal pill-connected" style="background:#e0e7ff; color:#4338ca; font-weight:600;">100% Local &middot; Zero Cloud APIs</span>
+      </div>
+      <div style="font-size:15px; color:var(--text-muted);">
+        Powered by <strong>Faster-Whisper + Local AI + OpenCV + FFmpeg (1080x1920)</strong>
+      </div>
+    </div>
+
+    <form id="formNativeClip" onsubmit="handleNativeClipSubmit(event)">
+      <div style="display:flex; gap:12px; margin-bottom:14px; flex-wrap:wrap;">
+        <div style="flex:2; min-width:280px;">
+          <label style="display:block; font-size:15px; font-weight:600; color:var(--text-secondary); margin-bottom:4px;">
+            YouTube Video URL or Local Video File Path
+          </label>
+          <input type="text" id="nativeVideoUrl" required
+                 placeholder="Paste YouTube URL (e.g. https://www.youtube.com/watch?v=...) or local path"
+                 class="neo-input" style="width:100%; font-size:15.5px; padding:10px 14px;">
+        </div>
+        <div style="flex:1; min-width:200px;">
+          <label style="display:block; font-size:15px; font-weight:600; color:var(--text-secondary); margin-bottom:4px;">
+            Optional Video Title
+          </label>
+          <input type="text" id="nativeVideoTitle"
+                 placeholder="Auto-detected from video"
+                 class="neo-input" style="width:100%; font-size:15.5px; padding:10px 14px;">
+        </div>
+      </div>
+
+      <!-- Clipper Options Grid -->
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap:12px; margin-bottom:16px; background:var(--surface-nested); padding:12px; border-radius:8px; border:1px solid var(--border-subtle);">
+        <div>
+          <label style="display:block; font-size:14.5px; font-weight:600; color:var(--text-secondary); margin-bottom:4px;">
+            Number of Clips
+          </label>
+          <select id="nativeNumClips" class="neo-input" style="width:100%; font-size:15px; padding:8px 10px;">
+            <option value="1">1 Short Clip</option>
+            <option value="2" selected>2 Distinct Clips (Recommended)</option>
+            <option value="3">3 Distinct Clips</option>
+            <option value="5">5 Highlights</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="display:block; font-size:14.5px; font-weight:600; color:var(--text-secondary); margin-bottom:4px;">
+            Target Duration
+          </label>
+          <select id="nativeDuration" class="neo-input" style="width:100%; font-size:15px; padding:8px 10px;">
+            <option value="20-40">20s &ndash; 40s (High Retention)</option>
+            <option value="30-55" selected>30s &ndash; 55s (Balanced Narrative)</option>
+            <option value="15-30">15s &ndash; 30s (Ultra-Punchy)</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="display:block; font-size:14.5px; font-weight:600; color:var(--text-secondary); margin-bottom:4px;">
+            9:16 Video Framing
+          </label>
+          <select id="nativeFraming" class="neo-input" style="width:100%; font-size:15px; padding:8px 10px;">
+            <option value="zoom_crop" selected>Smart 9:16 Zoom Crop (Fills Full Screen - Recommended)</option>
+            <option value="center_crop">Center 9:16 Zoom Crop</option>
+            <option value="blurred_bg">Blurred Background Padding (Letterbox)</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="display:block; font-size:14.5px; font-weight:600; color:var(--text-secondary); margin-bottom:4px;">
+            Dynamic Subtitles (ASS)
+          </label>
+          <select id="nativeCaptions" class="neo-input" style="width:100%; font-size:15px; padding:8px 10px;">
+            <option value="beast" selected>Beast Style (Bold Yellow/White)</option>
+            <option value="karaoke">Karaoke Word-by-Word Highlight</option>
+            <option value="clean">Clean Minimalist</option>
+            <option value="none">No Subtitles</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <label style="display:flex; align-items:center; gap:8px; font-size:15px; color:var(--text-muted); cursor:pointer;">
+          <input type="checkbox" id="nativeRightsConfirmed" checked required>
+          <span>I confirm I own or have permission to create derivative Short clips from this source video.</span>
+        </label>
+        <button type="submit" id="btnNativeClipSubmit" class="neo-btn neo-btn-primary" style="padding:10px 24px; font-size:16px; font-weight:700; background:#4f46e5; border-color:#4f46e5;">
+          ⚡ Generate AI Shorts
+        </button>
+      </div>
+    </form>
+
+    <!-- Real-Time Pipeline Progress Indicator -->
+    <div id="nativeProgressBox" style="{% if active_job %}display:block;{% else %}display:none;{% endif %} margin-top:16px; padding:16px; border-radius:8px; background:var(--surface-nested); border:1.5px solid #818cf8; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.08);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div style="width:20px; height:20px; border:3px solid #4f46e5; border-top-color:transparent; border-radius:50%; animation:spin 0.8s linear infinite;"></div>
+          <strong id="nativeProgressStageText" style="font-size:16px; color:var(--text-primary);">
+            {{ active_job.stage_label or 'Processing video...' if active_job else 'Processing video...' }}
+          </strong>
+        </div>
+        <span id="nativeProgressPct" style="font-weight:800; font-size:17px; color:#4f46e5;">
+          {{ active_job.progress_pct if active_job else 10 }}%
+        </span>
+      </div>
+      <div style="width:100%; height:10px; background:#e2e8f0; border-radius:5px; overflow:hidden;">
+        <div id="nativeProgressBar" style="width:{{ active_job.progress_pct if active_job else 10 }}%; height:100%; background:linear-gradient(90deg, #4f46e5, #06b6d4); transition:width 0.3s ease;"></div>
+      </div>
+      <div style="display:flex; justify-content:space-between; font-size:14px; color:var(--text-muted); margin-top:10px;">
+        <span>1. Ingestion</span>
+        <span>2. Faster-Whisper</span>
+        <span>3. Hook Analysis</span>
+        <span>4. Smart 9:16 Framing</span>
+        <span>5. ASS Captions &amp; MP4</span>
+      </div>
+    </div>
+  </div>
+
   <!-- Main Workflow Layout -->
+
   <div class="clips-workflow-grid">
     <!-- Left Column: Source Channel & Recent Uploads -->
     <div>
@@ -355,7 +467,7 @@
                       <div style="font-size:14px; color:#b91c1c; margin-top:2px;">Not extracted from source footage. Excluded from publishing queue.</div>
                     </div>
                   {% elif c.has_local_file %}
-                    <video src="/api/youtube/clips/{{ c.id }}/file" controls preload="metadata"></video>
+                    <video src="/api/youtube/clips/{{ c.id }}/file" poster="/api/youtube/clips/{{ c.id }}/thumbnail" controls preload="metadata"></video>
                   {% elif c.thumbnail_url %}
                     <img src="{{ c.thumbnail_url }}" alt="">
                   {% else %}
@@ -709,7 +821,157 @@
     }
 
 
-        async function submitClippingJob(videoUrl, videoTitle) {
+    
+    let nativePollInterval = null;
+
+    function startNativeJobPolling(jobId) {
+      if (!jobId) return;
+      localStorage.setItem('mint_active_clipping_job', jobId);
+
+      const submitBtn = document.getElementById('btnNativeClipSubmit');
+      const progressBox = document.getElementById('nativeProgressBox');
+      const progressBar = document.getElementById('nativeProgressBar');
+      const progressPct = document.getElementById('nativeProgressPct');
+      const stageText = document.getElementById('nativeProgressStageText');
+
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerText = 'AI Processing...';
+      }
+      if (progressBox) progressBox.style.display = 'block';
+
+      if (nativePollInterval) clearInterval(nativePollInterval);
+
+      const checkProject = async () => {
+        try {
+          const pRes = await fetch(`/api/clipper/projects/${jobId}`);
+          if (!pRes.ok) return;
+          const pData = await pRes.json();
+          if (pData.success && pData.project) {
+            const proj = pData.project;
+            const pct = proj.progress_pct || 15;
+            if (progressBar) progressBar.style.width = pct + '%';
+            if (progressPct) progressPct.innerText = pct + '%';
+
+            const stageNames = {
+              'queued': 'Job queued in background...',
+              'downloading_source': 'Ingesting and probing source video...',
+              'transcribing_audio': 'Transcribing speech with Faster-Whisper (word timestamps)...',
+              'analyzing_hooks': 'Analyzing semantic hooks & virality (Local AI)...',
+              'ranking_clips': 'Selecting top distinct non-overlapping moments...',
+              'rendering_clips': 'Smart 9:16 framing, ASS subtitles, and FFmpeg encoding...',
+              'completed': '✓ Completed! Clips ready in review queue.',
+              'failed': '✕ Processing failed'
+            };
+
+            const displayLabel = proj.stage_label || stageNames[proj.stage] || `Processing (${proj.stage || 'active'})...`;
+            if (stageText) stageText.innerText = displayLabel;
+
+            if (proj.status === 'completed') {
+              clearInterval(nativePollInterval);
+              localStorage.removeItem('mint_active_clipping_job');
+              if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerText = '⚡ Generate AI Shorts';
+              }
+              if (progressBar) progressBar.style.width = '100%';
+              if (progressPct) progressPct.innerText = '100%';
+              if (stageText) stageText.innerText = `✓ Successfully generated ${proj.clips_count || 1} vertical Shorts! Updating review queue...`;
+              setTimeout(() => location.reload(), 1500);
+            } else if (proj.status === 'failed') {
+              clearInterval(nativePollInterval);
+              localStorage.removeItem('mint_active_clipping_job');
+              if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerText = '⚡ Generate AI Shorts';
+              }
+              if (stageText) stageText.innerText = '✕ Failed: ' + (proj.error_message || 'Video processing failed.');
+            }
+          }
+        } catch (pollErr) {
+          console.error('Polling error', pollErr);
+        }
+      };
+
+      // Check immediately, then every 2 seconds
+      checkProject();
+      nativePollInterval = setInterval(checkProject, 2000);
+    }
+
+    async function handleNativeClipSubmit(e) {
+      e.preventDefault();
+      const videoUrl = document.getElementById('nativeVideoUrl').value.trim();
+      const videoTitle = document.getElementById('nativeVideoTitle').value.trim();
+      const numClips = parseInt(document.getElementById('nativeNumClips').value || '2', 10);
+      const durRange = document.getElementById('nativeDuration').value.split('-');
+      const minDur = parseFloat(durRange[0] || '20');
+      const maxDur = parseFloat(durRange[1] || '55');
+      const framingMode = document.getElementById('nativeFraming').value;
+      const captionStyle = document.getElementById('nativeCaptions').value;
+      const rightsConfirmed = document.getElementById('nativeRightsConfirmed').checked;
+
+      if (!rightsConfirmed) {
+        alert('Please confirm video reuse permission.');
+        return;
+      }
+
+      const submitBtn = document.getElementById('btnNativeClipSubmit');
+      const progressBox = document.getElementById('nativeProgressBox');
+      const progressBar = document.getElementById('nativeProgressBar');
+      const progressPct = document.getElementById('nativeProgressPct');
+      const stageText = document.getElementById('nativeProgressStageText');
+
+      submitBtn.disabled = true;
+      submitBtn.innerText = 'Initializing Pipeline...';
+      progressBox.style.display = 'block';
+      progressBar.style.width = '10%';
+      progressPct.innerText = '10%';
+      stageText.innerText = 'Starting native AI clipping job...';
+
+      try {
+        const res = await fetch('/api/youtube/clips/generate', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            video_url: videoUrl,
+            video_title: videoTitle,
+            num_clips: numClips,
+            min_duration: minDur,
+            max_duration: maxDur,
+            framing_mode: framingMode,
+            caption_style: captionStyle,
+            provider: 'native_engine',
+            async: true
+          })
+        });
+
+        const data = await res.json();
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to start clipping job');
+        }
+
+        const jobId = data.job_id || data.project_id;
+        startNativeJobPolling(jobId);
+
+      } catch (err) {
+        alert('Error: ' + err.message);
+        submitBtn.disabled = false;
+        submitBtn.innerText = '⚡ Generate AI Shorts';
+        progressBox.style.display = 'none';
+      }
+    }
+
+    // Auto-resume active job on page reload so user never loses rendering progress
+    document.addEventListener('DOMContentLoaded', () => {
+      const serverJobId = "{{ active_job.job_id if active_job else '' }}";
+      const localJobId = localStorage.getItem('mint_active_clipping_job');
+      const activeJobId = serverJobId || localJobId;
+      if (activeJobId) {
+        startNativeJobPolling(activeJobId);
+      }
+    });
+
+    async function submitClippingJob(videoUrl, videoTitle) {
       const btn = window.event ? window.event.target : null;
       if (btn) {
         btn.disabled = true;
@@ -720,7 +982,7 @@
         const res = await fetch('/api/youtube/clips/generate', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ video_url: videoUrl, video_title: videoTitle, provider: 'local_free' })
+          body: JSON.stringify({ video_url: videoUrl, video_title: videoTitle, provider: 'auto' })
         });
         const data = await res.json();
         if (data.success) {

@@ -11,6 +11,7 @@ from flask import Blueprint, request, jsonify, render_template, send_file, abort
 from werkzeug.utils import secure_filename
 
 import config
+from database import get_db_connection
 from agents.youtube_clips_agent import YouTubeClipsAgent, get_youtube_clips_base_dir
 from services.clipper_mcp_client import ClipperMCPClient
 from services.local_clipper_service import LocalClipperService
@@ -54,6 +55,18 @@ def youtube_clips_view():
     upcoming_slots = YouTubeSchedulerService.calculate_next_slots(count=4)
     yt_destination = YouTubeService.get_status()
 
+    active_job = None
+    for p in projects:
+        if p.get("status") == "processing":
+            active_job = dict(p)
+            try:
+                raw_json = json.loads(p.get("raw_response_json") or "{}")
+                active_job["stage"] = raw_json.get("stage", "processing")
+                active_job["stage_label"] = raw_json.get("stage_label", "")
+            except Exception:
+                pass
+            break
+
     return render_template(
         "youtube_clips.html",
         agent_status=agent_status,
@@ -66,6 +79,7 @@ def youtube_clips_view():
         scheduled_posts=scheduled_posts,
         upcoming_slots=upcoming_slots,
         yt_destination=yt_destination,
+        active_job=active_job,
         current_page="youtube_clips"
     )
 
@@ -146,11 +160,42 @@ def api_generate_clips():
     source_channel_name = data.get("source_channel_name")
     start_time = data.get("start_time")
     end_time = data.get("end_time")
-    provider = data.get("provider", "openshorts_mcp")
+    provider = data.get("provider", "native_engine")
     is_test = int(data.get("is_test", 0))
+    num_clips = int(data.get("num_clips", 2))
+    min_duration = float(data.get("min_duration", 20.0))
+    max_duration = float(data.get("max_duration", 55.0))
+    framing_mode = str(data.get("framing_mode", "zoom_crop"))
+    caption_style = str(data.get("caption_style", "beast"))
+    async_mode = bool(data.get("async", False))
 
     if not video_url:
         return jsonify({"success": False, "error": "video_url is required."}), 400
+
+    if async_mode and provider in ("native_engine", "auto"):
+        from services.clipping.clipping_pipeline import ClippingPipeline
+        job_id = ClippingPipeline.start_background_job(
+            source=video_url,
+            is_url=True,
+            video_title=video_title or "",
+            channel_id=source_channel_id or "youtube",
+            channel_name=source_channel_name or "YouTube Source",
+            start_time=start_time,
+            end_time=end_time,
+            num_clips=num_clips,
+            min_duration=min_duration,
+            max_duration=max_duration,
+            framing_mode=framing_mode,
+            caption_style=caption_style,
+            is_test=is_test
+        )
+        return jsonify({
+            "success": True,
+            "status": "processing",
+            "job_id": job_id,
+            "project_id": job_id,
+            "message": "Native AI clipping job started in background."
+        }), 200
 
     res = YouTubeClipsAgent.submit_clipping_job(
         video_url_or_id=video_url,
@@ -160,7 +205,12 @@ def api_generate_clips():
         start_time=start_time,
         end_time=end_time,
         provider=provider,
-        is_test=is_test
+        is_test=is_test,
+        num_clips=num_clips,
+        min_duration=min_duration,
+        max_duration=max_duration,
+        framing_mode=framing_mode,
+        caption_style=caption_style
     )
     status_code = 200 if res.get("success") else 400
     return jsonify(res), status_code
@@ -205,6 +255,28 @@ def api_upload_and_clip():
     status_code = 200 if res.get("success") else 400
     return jsonify(res), status_code
 
+
+@youtube_clips_bp.route("/api/clipper/projects/<project_id>", methods=["GET"])
+def api_get_single_project(project_id: str):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM openshorts_jobs WHERE job_id = ?", (project_id,))
+    row = cur.fetchone()
+    conn.close()
+    if not row:
+        return jsonify({"success": False, "error": "Project not found"}), 404
+    p = dict(row)
+    stage = "processing"
+    stage_label = ""
+    try:
+        raw_json = json.loads(p.get("raw_response_json") or "{}")
+        stage = raw_json.get("stage", "processing")
+        stage_label = raw_json.get("stage_label", "")
+    except Exception:
+        pass
+    p["stage"] = stage
+    p["stage_label"] = stage_label
+    return jsonify({"success": True, "project": p})
 
 @youtube_clips_bp.route("/api/clipper/projects", methods=["GET"])
 def api_list_projects():
@@ -341,6 +413,30 @@ def serve_clip_file(clip_id: int):
         abort(404)
 
     return send_file(str(file_path), mimetype="video/mp4", conditional=True)
+
+
+@youtube_clips_bp.route("/api/youtube/clips/<int:clip_id>/thumbnail", methods=["GET"])
+def serve_clip_thumbnail(clip_id: int):
+    """
+    Path-traversal safe endpoint to serve generated clip thumbnail JPEG.
+    """
+    conn = YouTubeClipsAgent.list_clips(limit=500, include_test=True)
+    target_clip = next((c for c in conn if c["id"] == clip_id), None)
+    if not target_clip:
+        abort(404)
+
+    thumb_val = target_clip.get("thumbnail_url")
+    if not thumb_val or not os.path.exists(thumb_val):
+        abort(404)
+
+    thumb_path = Path(thumb_val).resolve()
+    base_dir = get_youtube_clips_base_dir().resolve()
+    try:
+        thumb_path.relative_to(base_dir)
+    except ValueError:
+        abort(403)
+
+    return send_file(str(thumb_path), mimetype="image/jpeg")
 
 
 # ── API: Schedule Management ─────────────────────────────────────────────────
