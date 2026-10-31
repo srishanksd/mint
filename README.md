@@ -322,6 +322,37 @@ YOUTUBE_REDIRECT_URI=http://127.0.0.1:5000/api/youtube/callback
 - FFmpeg installed and accessible in system `PATH` (verify with `ffmpeg -version`)
 - Ollama running locally (`ollama pull llama3.2`) or API keys configured in `.env`
 
+## Prerequisites: Installing FFmpeg on Windows
+
+Follow these steps in the terminal to install FFmpeg and automatically configure it in your system PATH.
+
+### 1. Download and Extract FFmpeg
+Open **PowerShell as an Administrator** and run the following commands to download and extract the latest FFmpeg build:
+
+```powershell
+\$build = "ffmpeg-master-latest-win64-gpl"
+curl.exe -fLO --output-dir "HOME" "https://github.com"
+Expand-Archive "HOME\$build.zip" -DestinationPath "Env:ProgramFiles\ffmpeg" -Force
+Remove-Item "\$HOME\$build.zip"
+```
+
+### 2. Add to System PATH
+Run this command in the same Administrator PowerShell window to add FFmpeg to your system's global Environment Variables:
+
+```powershell
+targetFolder = "Env:ProgramFiles\ffmpeg\$build\bin"
+[Environment]::SetEnvironmentVariable("Path", [Environment]::GetEnvironmentVariable("Path", [EnvironmentVariableTarget]::Machine) + ";\$targetFolder", [EnvironmentVariableTarget]::Machine)
+```
+
+### 3. Verify Installation
+**Restart your terminal** (close and reopen it) to refresh the environment variables, then run:
+
+```bash
+ffmpeg -version
+```
+If configured correctly, you will see the version number and build details printed in the console.
+
+
 ### Installation
 ```powershell
 pip install -r requirements.txt
